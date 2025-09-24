@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Result}; // improved error handling
 use bevy::prelude::*;
 use std::collections::HashMap;
 use std::fs;
@@ -32,62 +32,64 @@ fn main() {
 
 // Function to parse XYZ file format
 fn parse_xyz_file(filename: &str) -> Result<Vec<Atom>> {
-    let contents = fs::read_to_string(filename)
-        .context(format!("Failed to read file: {}", filename))?;
-    
+    let contents =
+        fs::read_to_string(filename).context(format!("Failed to read file: {}", filename))?;
+
     let lines: Vec<&str> = contents.lines().collect();
-    
+
     if lines.len() < 2 {
         return Err(anyhow::anyhow!("XYZ file too short"));
     }
-    
+
     // First line should contain the number of atoms
-    let num_atoms: usize = lines[0].trim().parse()
+    let num_atoms: usize = lines[0]
+        .trim()
+        .parse()
         .context("Failed to parse number of atoms")?;
-    
+
     // Second line is a comment (we can skip it)
     // Remaining lines contain atom data
-    
+
     let mut atoms = Vec::new();
-    
+
     for (i, line) in lines.iter().skip(2).enumerate() {
         if i >= num_atoms {
             break;
         }
-        
+
         let parts: Vec<&str> = line.split_whitespace().collect();
         if parts.len() < 4 {
             continue; // Skip malformed lines
         }
-        
+
         let atom = Atom {
             element: parts[0].to_string(),
             x: parts[1].parse().context("Failed to parse x coordinate")?,
             y: parts[2].parse().context("Failed to parse y coordinate")?,
             z: parts[3].parse().context("Failed to parse z coordinate")?,
         };
-        
+
         atoms.push(atom);
     }
-    
+
     Ok(atoms)
 }
 
 // Get color for different elements
 fn get_element_color(element: &str) -> Color {
     match element.to_uppercase().as_str() {
-        "H" => Color::WHITE,           // Hydrogen - white
-        "C" => Color::BLACK,           // Carbon - black
-        "N" => Color::BLUE,            // Nitrogen - blue
-        "O" => Color::RED,             // Oxygen - red
-        "S" => Color::YELLOW,          // Sulfur - yellow
-        "P" => Color::ORANGE,          // Phosphorus - orange
-        "CL" => Color::GREEN,          // Chlorine - green
+        "H" => Color::WHITE,                  // Hydrogen - white
+        "C" => Color::BLACK,                  // Carbon - black
+        "N" => Color::BLUE,                   // Nitrogen - blue
+        "O" => Color::RED,                    // Oxygen - red
+        "S" => Color::YELLOW,                 // Sulfur - yellow
+        "P" => Color::ORANGE,                 // Phosphorus - orange
+        "CL" => Color::GREEN,                 // Chlorine - green
         "BR" => Color::rgb(0.65, 0.16, 0.16), // Bromine - dark red
         "I" => Color::rgb(0.58, 0.0, 0.58),   // Iodine - purple
         "FE" => Color::rgb(1.0, 0.65, 0.0),   // Iron - orange
         "ZN" => Color::rgb(0.49, 0.50, 0.69), // Zinc - bluish
-        _ => Color::GRAY,              // Default - gray
+        _ => Color::GRAY,                     // Default - gray
     }
 }
 
@@ -118,16 +120,34 @@ fn load_crystal(mut commands: Commands) {
             atoms
         }
         Err(e) => {
-            println!("Could not load crystal.xyz ({}), using default structure", e);
+            println!(
+                "Could not load crystal.xyz ({}), using default structure",
+                e
+            );
             // Create a simple water molecule as default
             vec![
-                Atom { element: "O".to_string(), x: 0.0, y: 0.0, z: 0.0 },
-                Atom { element: "H".to_string(), x: 0.757, y: 0.587, z: 0.0 },
-                Atom { element: "H".to_string(), x: -0.757, y: 0.587, z: 0.0 },
+                Atom {
+                    element: "O".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                Atom {
+                    element: "H".to_string(),
+                    x: 0.757,
+                    y: 0.587,
+                    z: 0.0,
+                },
+                Atom {
+                    element: "H".to_string(),
+                    x: -0.757,
+                    y: 0.587,
+                    z: 0.0,
+                },
             ]
         }
     };
-    
+
     commands.insert_resource(Crystal { atoms });
 }
 
@@ -140,10 +160,10 @@ fn setup_scene(
 ) {
     // Create a sphere mesh for atoms
     let sphere_mesh = meshes.add(Mesh::from(Sphere { radius: 1.0 }));
-    
+
     // Create materials for different elements
     let mut element_materials: HashMap<String, Handle<StandardMaterial>> = HashMap::new();
-    
+
     // Spawn atoms as 3D spheres
     for atom in &crystal.atoms {
         // Get or create material for this element
@@ -158,7 +178,7 @@ fn setup_scene(
                 })
             })
             .clone();
-        
+
         // Spawn the atom as a sphere
         commands.spawn((
             PbrBundle {
@@ -174,7 +194,7 @@ fn setup_scene(
             AtomEntity,
         ));
     }
-    
+
     // Add a light source
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
@@ -188,7 +208,7 @@ fn setup_scene(
         },
         ..default()
     });
-    
+
     // Add ambient light
     commands.insert_resource(AmbientLight {
         color: Color::WHITE,
@@ -199,22 +219,21 @@ fn setup_scene(
 // System to set up the camera
 fn setup_camera(mut commands: Commands) {
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(5.0, 5.0, 5.0)
-            .looking_at(Vec3::ZERO, Vec3::Y),
+        transform: Transform::from_xyz(5.0, 5.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     });
 }
 
 // Simple camera controls
 fn camera_controls(
-    mut camera_query: Query<&mut Transform, With<Camera3d>>,
+    mut camera_query: Query<&mut Transform, bevy_ecs::query::filter::With<Camera3d>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
 ) {
     if let Ok(mut transform) = camera_query.get_single_mut() {
         let mut rotation = Vec3::ZERO;
         let rotation_speed = 1.0;
-        
+
         if keyboard_input.pressed(KeyCode::ArrowLeft) {
             rotation.y += rotation_speed * time.delta_seconds();
         }
@@ -227,15 +246,18 @@ fn camera_controls(
         if keyboard_input.pressed(KeyCode::ArrowDown) {
             rotation.x -= rotation_speed * time.delta_seconds();
         }
-        
+
         // Apply rotation around the center
         if rotation != Vec3::ZERO {
             let distance = transform.translation.length();
-            transform.rotate_around(Vec3::ZERO, Quat::from_euler(EulerRot::XYZ, rotation.x, rotation.y, 0.0));
+            transform.rotate_around(
+                Vec3::ZERO,
+                Quat::from_euler(EulerRot::XYZ, rotation.x, rotation.y, 0.0),
+            );
             transform.translation = transform.translation.normalize() * distance;
             transform.look_at(Vec3::ZERO, Vec3::Y);
         }
-        
+
         // Zoom controls
         let zoom_speed = 5.0;
         if keyboard_input.pressed(KeyCode::Equal) || keyboard_input.pressed(KeyCode::Plus) {
