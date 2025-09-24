@@ -1,4 +1,4 @@
-use anyhow::{Context, Result}; // improved error handling
+use anyhow::{Context, Result};
 use bevy::prelude::*;
 use std::collections::HashMap;
 use std::fs;
@@ -78,18 +78,18 @@ fn parse_xyz_file(filename: &str) -> Result<Vec<Atom>> {
 // Get color for different elements
 fn get_element_color(element: &str) -> Color {
     match element.to_uppercase().as_str() {
-        "H" => Color::WHITE,                  // Hydrogen - white
-        "C" => Color::BLACK,                  // Carbon - black
-        "N" => Color::BLUE,                   // Nitrogen - blue
-        "O" => Color::RED,                    // Oxygen - red
-        "S" => Color::YELLOW,                 // Sulfur - yellow
-        "P" => Color::ORANGE,                 // Phosphorus - orange
-        "CL" => Color::GREEN,                 // Chlorine - green
-        "BR" => Color::rgb(0.65, 0.16, 0.16), // Bromine - dark red
-        "I" => Color::rgb(0.58, 0.0, 0.58),   // Iodine - purple
-        "FE" => Color::rgb(1.0, 0.65, 0.0),   // Iron - orange
-        "ZN" => Color::rgb(0.49, 0.50, 0.69), // Zinc - bluish
-        _ => Color::GRAY,                     // Default - gray
+        "H" => Color::srgb(1.0, 1.0, 1.0),     // Hydrogen - white
+        "C" => Color::srgb(0.0, 0.0, 0.0),     // Carbon - black
+        "N" => Color::srgb(0.0, 0.0, 1.0),     // Nitrogen - blue
+        "O" => Color::srgb(1.0, 0.0, 0.0),     // Oxygen - red
+        "S" => Color::srgb(1.0, 1.0, 0.0),     // Sulfur - yellow
+        "P" => Color::srgb(1.0, 0.65, 0.0),    // Phosphorus - orange
+        "CL" => Color::srgb(0.0, 1.0, 0.0),    // Chlorine - green
+        "BR" => Color::srgb(0.65, 0.16, 0.16), // Bromine - dark red
+        "I" => Color::srgb(0.58, 0.0, 0.58),   // Iodine - purple
+        "FE" => Color::srgb(1.0, 0.65, 0.0),   // Iron - orange
+        "ZN" => Color::srgb(0.49, 0.50, 0.69), // Zinc - bluish
+        _ => Color::srgb(0.5, 0.5, 0.5),       // Default - gray
     }
 }
 
@@ -172,7 +172,6 @@ fn setup_scene(
             .or_insert_with(|| {
                 materials.add(StandardMaterial {
                     base_color: get_element_color(&atom.element),
-                    roughness: 0.3,
                     metallic: 0.0,
                     ..default()
                 })
@@ -181,14 +180,11 @@ fn setup_scene(
 
         // Spawn the atom as a sphere
         commands.spawn((
-            PbrBundle {
-                mesh: sphere_mesh.clone(),
-                material,
-                transform: Transform {
-                    translation: Vec3::new(atom.x, atom.y, atom.z),
-                    scale: Vec3::splat(get_element_size(&atom.element)),
-                    ..default()
-                },
+            Mesh3d(sphere_mesh.clone()),
+            MeshMaterial3d(material),
+            Transform {
+                translation: Vec3::new(atom.x, atom.y, atom.z),
+                scale: Vec3::splat(get_element_size(&atom.element)),
                 ..default()
             },
             AtomEntity,
@@ -196,55 +192,55 @@ fn setup_scene(
     }
 
     // Add a light source
-    commands.spawn(DirectionalLightBundle {
-        directional_light: DirectionalLight {
+    commands.spawn((
+        DirectionalLight {
             shadows_enabled: true,
             ..default()
         },
-        transform: Transform {
+        Transform {
             translation: Vec3::new(0.0, 10.0, 0.0),
             rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_4),
             ..default()
         },
-        ..default()
-    });
+    ));
 
     // Add ambient light
     commands.insert_resource(AmbientLight {
         color: Color::WHITE,
         brightness: 0.3,
+        affects_lightmapped_meshes: false
     });
 }
 
 // System to set up the camera
 fn setup_camera(mut commands: Commands) {
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(5.0, 5.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    });
+    commands.spawn((
+        Camera3d::default(),
+        Transform::from_xyz(5.0, 5.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+    ));
 }
 
 // Simple camera controls
 fn camera_controls(
-    mut camera_query: Query<&mut Transform, bevy_ecs::query::filter::With<Camera3d>>,
+    mut camera_query: Query<&mut Transform, With<Camera3d>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
 ) {
-    if let Ok(mut transform) = camera_query.get_single_mut() {
+    if let Ok(mut transform) = camera_query.single_mut() {
         let mut rotation = Vec3::ZERO;
         let rotation_speed = 1.0;
 
         if keyboard_input.pressed(KeyCode::ArrowLeft) {
-            rotation.y += rotation_speed * time.delta_seconds();
+            rotation.y += rotation_speed * time.delta_secs();
         }
         if keyboard_input.pressed(KeyCode::ArrowRight) {
-            rotation.y -= rotation_speed * time.delta_seconds();
+            rotation.y -= rotation_speed * time.delta_secs();
         }
         if keyboard_input.pressed(KeyCode::ArrowUp) {
-            rotation.x += rotation_speed * time.delta_seconds();
+            rotation.x += rotation_speed * time.delta_secs();
         }
         if keyboard_input.pressed(KeyCode::ArrowDown) {
-            rotation.x -= rotation_speed * time.delta_seconds();
+            rotation.x -= rotation_speed * time.delta_secs();
         }
 
         // Apply rotation around the center
@@ -260,11 +256,11 @@ fn camera_controls(
 
         // Zoom controls
         let zoom_speed = 5.0;
-        if keyboard_input.pressed(KeyCode::Equal) || keyboard_input.pressed(KeyCode::Plus) {
-            transform.translation *= 1.0 - zoom_speed * time.delta_seconds();
+        if keyboard_input.pressed(KeyCode::Equal) {
+            transform.translation *= 1.0 - zoom_speed * time.delta_secs();
         }
         if keyboard_input.pressed(KeyCode::Minus) {
-            transform.translation *= 1.0 + zoom_speed * time.delta_seconds();
+            transform.translation *= 1.0 + zoom_speed * time.delta_secs();
         }
     }
 }
