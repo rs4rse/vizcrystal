@@ -25,7 +25,7 @@ struct AtomEntity;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_systems(Startup, (load_crystal, setup_scene, setup_camera))
+        .add_systems(Startup, (load_crystal, setup_scene, setup_camera).chain())
         .add_systems(Update, camera_controls)
         .run();
 }
@@ -208,7 +208,7 @@ fn setup_scene(
     commands.insert_resource(AmbientLight {
         color: Color::WHITE,
         brightness: 0.3,
-        affects_lightmapped_meshes: false
+        affects_lightmapped_meshes: false,
     });
 }
 
