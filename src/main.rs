@@ -4,7 +4,9 @@ use std::collections::HashMap;
 use std::fs;
 
 // Structure to represent an atom from XYZ file
-#[derive(Debug, Clone)]
+// `#` is a macro. no inheritance. close to python decorator. injecting on top of something.
+// traits are like interfaces.
+#[derive(Debug)]
 struct Atom {
     element: String,
     x: f32,
@@ -31,11 +33,12 @@ fn main() {
 }
 
 // Function to parse XYZ file format
-fn parse_xyz_file(filename: &str) -> Result<Vec<Atom>> {
+fn parse_xyz_file(filename: &str) -> Result<Crystal> {
     let contents =
-        fs::read_to_string(filename).context(format!("Failed to read file: {}", filename))?;
+        fs::read_to_string(filename)?;
+        // .context(format!("Failed to read file: {}", filename))?;
 
-    let lines: Vec<&str> = contents.lines().collect();
+    let lines = contents.lines().collect::<Vec<&str>>();
 
     if lines.len() < 2 {
         return Err(anyhow::anyhow!("XYZ file too short"));
@@ -72,7 +75,7 @@ fn parse_xyz_file(filename: &str) -> Result<Vec<Atom>> {
         atoms.push(atom);
     }
 
-    Ok(atoms)
+    Ok(Crystal { atoms })
 }
 
 // Get color for different elements
@@ -114,41 +117,21 @@ fn get_element_size(element: &str) -> f32 {
 // System to load crystal data
 fn load_crystal(mut commands: Commands) {
     // Try to load an example XYZ file, or create some default atoms if file doesn't exist
-    let atoms = match parse_xyz_file("crystal.xyz") {
-        Ok(atoms) => {
-            println!("Loaded {} atoms from crystal.xyz", atoms.len());
-            atoms
-        }
-        Err(e) => {
-            println!(
-                "Could not load crystal.xyz ({}), using default structure",
-                e
-            );
-            // Create a simple water molecule as default
-            vec![
-                Atom {
-                    element: "O".to_string(),
-                    x: 0.0,
-                    y: 0.0,
-                    z: 0.0,
-                },
-                Atom {
-                    element: "H".to_string(),
-                    x: 0.757,
-                    y: 0.587,
-                    z: 0.0,
-                },
-                Atom {
-                    element: "H".to_string(),
-                    x: -0.757,
-                    y: 0.587,
-                    z: 0.0,
-                },
-            ]
-        }
-    };
+    let crystal = parse_xyz_file("crystal2.xyz").unwrap();
+    // {
+    //     Ok(crystal) => {
+    //         println!("Loaded {} atoms from crystal.xyz", crystal.atoms.len());
+    //         crystal
+    //     }
+    //     Err(e) => {
+    //         println!(
+    //             "Could not load crystal.xyz ({})",
+    //             e
+    //         );
+    //     }
+    // };
 
-    commands.insert_resource(Crystal { atoms });
+    commands.insert_resource( crystal );
 }
 
 // System to set up the 3D scene
