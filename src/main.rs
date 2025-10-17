@@ -36,7 +36,7 @@ fn main() {
 fn parse_xyz_file(filename: &str) -> Result<Crystal> {
     let contents =
         fs::read_to_string(filename)?;
-        // .context(format!("Failed to read file: {}", filename))?;
+    // .context(format!("Failed to read file: {}", filename))?;
 
     let lines = contents.lines().collect::<Vec<&str>>();
 
@@ -174,18 +174,7 @@ fn setup_scene(
         ));
     }
 
-    // Add a light source
-    commands.spawn((
-        DirectionalLight {
-            shadows_enabled: true,
-            ..default()
-        },
-        Transform {
-            translation: Vec3::new(0.0, 10.0, 0.0),
-            rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_4),
-            ..default()
-        },
-    ));
+    // Remove static scene light; lighting will be attached to the camera in setup_camera
 
     // Add ambient light
     commands.insert_resource(AmbientLight {
@@ -197,10 +186,23 @@ fn setup_scene(
 
 // System to set up the camera
 fn setup_camera(mut commands: Commands) {
-    commands.spawn((
-        Camera3d::default(),
-        Transform::from_xyz(5.0, 5.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-    ));
+    // Spawn camera
+    commands
+        .spawn((
+            Camera3d::default(),
+            Transform::from_xyz(5.0, 5.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+        ))
+        .with_children(|parent| {
+            // Attach a directional light to the camera so it always points where the camera looks
+            // For directional lights, only rotation matters; translation is ignored
+            parent.spawn((
+                DirectionalLight {
+                    shadows_enabled: true,
+                    ..default()
+                },
+                Transform::default(), // inherit camera rotation; light points along -Z in local space
+            ));
+        });
 }
 
 // Simple camera controls
