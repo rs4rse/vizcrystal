@@ -34,8 +34,7 @@ fn main() {
 
 // Function to parse XYZ file format
 fn parse_xyz_file(filename: &str) -> Result<Crystal> {
-    let contents =
-        fs::read_to_string(filename)?;
+    let contents = fs::read_to_string(filename)?;
     // .context(format!("Failed to read file: {}", filename))?;
 
     let lines = contents.lines().collect::<Vec<&str>>();
@@ -117,21 +116,44 @@ fn get_element_size(element: &str) -> f32 {
 // System to load crystal data
 fn load_crystal(mut commands: Commands) {
     // Try to load an example XYZ file, or create some default atoms if file doesn't exist
-    let crystal = parse_xyz_file("crystal2.xyz").unwrap();
-    // {
-    //     Ok(crystal) => {
-    //         println!("Loaded {} atoms from crystal.xyz", crystal.atoms.len());
-    //         crystal
-    //     }
-    //     Err(e) => {
-    //         println!(
-    //             "Could not load crystal.xyz ({})",
-    //             e
-    //         );
-    //     }
-    // };
+    let crystal = match parse_xyz_file("crystal.xyz") {
+        Ok(crystal) => {
+            println!("Loaded {} atoms from crystal.xyz", crystal.atoms.len());
+            crystal
+        }
+        Err(e) => {
+            println!(
+                "Could not load crystal.xyz ({}), using default structure",
+                e
+            );
 
-    commands.insert_resource( crystal );
+            // Create a simple water molecule as default
+            Crystal {
+                atoms: vec![
+                    Atom {
+                        element: "O".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        z: 0.0,
+                    },
+                    Atom {
+                        element: "H".to_string(),
+                        x: 0.757,
+                        y: 0.587,
+                        z: 0.0,
+                    },
+                    Atom {
+                        element: "H".to_string(),
+                        x: -0.757,
+                        y: 0.587,
+                        z: 0.0,
+                    },
+                ],
+            }
+        }
+    };
+
+    commands.insert_resource(crystal);
 }
 
 // System to set up the 3D scene
