@@ -4,5 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = { version = "0.16", features = ["default"] }
+bevy = { version = "0.16", features = ["default", "webgl2"] }
 anyhow = "1.0"
+
+# Optimize for smaller WASM binary size
+[profile.release]
+opt-level = "z"
+lto = "thin"
+codegen-units = 1
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
