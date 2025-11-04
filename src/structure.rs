@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+
 // Structure to represent an atom from XYZ file
 // `#` is a macro. no inheritance. close to python decorator. injecting on top of something.
 // traits are like interfaces.

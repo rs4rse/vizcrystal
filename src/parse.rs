@@ -1,6 +1,8 @@
 use crate::structure::{Atom, Crystal};
 use anyhow::{Context, Result};
+
 // Function to parse XYZ file format from string content
+#[allow(dead_code)]
 fn parse_xyz_content(contents: &str) -> Result<Crystal> {
     let lines = contents.lines().collect::<Vec<&str>>();
 

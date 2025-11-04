@@ -1,13 +1,16 @@
 [package]
-name = "crystal_visualizer"
+name = "vizmat"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = { version = "0.16", features = ["default", "webgl2"] }
+bevy = { version = "0.16", features = ["default"] }
 anyhow = "1.0"
 
-# Optimize for smaller WASM binary size
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+bevy = { version = "0.16", features = ["webgl2"] }
+
+# optimize for smaller WASM binary size
 [profile.release]
 opt-level = "z"
 lto = "thin"

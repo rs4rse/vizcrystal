@@ -1,6 +1,7 @@
 use bevy::prelude::*;
-use crystal_visualizer::io::load_crystal;
-use crystal_visualizer::ui::{camera_controls, setup_camera, setup_scene};
+
+use vizmat::io::load_crystal;
+use vizmat::ui::{camera_controls, setup_camera, setup_scene};
 
 fn main() {
     App::new()

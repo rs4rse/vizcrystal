@@ -1772,14 +1772,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
 
 [[package]]
-name = "crystal_visualizer"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bevy",
-]
-
-[[package]]
 name = "ctrlc"
 version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4262,6 +4254,14 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "vizmat"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bevy",
+]
 
 [[package]]
 name = "walkdir"

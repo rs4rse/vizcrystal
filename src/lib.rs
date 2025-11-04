@@ -1,5 +1,6 @@
-pub mod constants;
 pub mod io;
-pub mod parse;
-pub mod structure;
 pub mod ui;
+
+pub(crate) mod constants;
+pub(crate) mod parse;
+pub(crate) mod structure;
