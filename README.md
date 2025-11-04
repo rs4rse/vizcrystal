@@ -1,69 +1,77 @@
-# vizcrystal
+# vizmat
 
-Crystal visualizer go brrr
+Molecule and crystal visualizer go brrr
 
-`vizcrystal` is an experimental project to build a crystal structure visualizer in Rust using [Bevy](https://bevyengine.org/).
-The goal is to start with a desktop visualization prototype and later extend it to run in the browser via WebAssembly (WASM).
+`vizmat` is an experimental project to build a crystal structure visualizer in Rust using [Bevy](https://bevyengine.org/).
 
-This project started as part of a study group session — going line by line through code, learning Bevy and Rust fundamentals together, and gradually building up toward a minimal viable product.
+This project started as part of a rust learn and hack session at Paul Scherrer Institute — going line by line through code, learning Bevy and Rust fundamentals together, and gradually building up toward a minimal viable product.
 
-## Learning journey
+This project is an educational experiment:
 
-This project is also an educational experiment:
+- We discuss Rust basics, Bevy concepts, and code structure as a group (mix of rust beginners and some are already fluent in rust but new to bevy/wasm).
+- Each session recaps progress, explains new code, and sets up the next steps
+- By the end, several contributors will have hands-on knowledge of Bevy and Rust from scratch, a good foundation for an open-source project
 
-* We discuss Rust basics, Bevy concepts, and code structure as a group (mix of rust beginners and some are already fluent in rust but new to bevy/wasm).
-* Each session recaps progress, explains new code, and sets up the next steps
-* By the end, several contributors will have hands-on knowledge of Bevy and Rust from scratch, a good foundation for an open-source project
+## Contributing & Development Setup
 
-## Project goals
+Contributions are welcome. This project uses Rust and Bevy. Familiarity with Rust tooling and basic CLI usage is assumed.
 
-Phase 1 – Desktop prototype
+### Windows
 
-* Learn the basics of Bevy and ECS
-* Render simple crystal structures on desktop
-* Reach a small but working visualization demo
+* Install Rust via `rustup` (MSVC toolchain)
+* Optional: Vulkan SDK
 
-Phase 2 – WebAssembly (WASM)
-
-* Port the visualization to run in browsers
-* Understand Bevy’s WASM build pipeline
-* Deliver a browser-based version of the crystal visualizer
-
-Phase 3 – Extensibility
-
-* Provide a foundation for further development (for example, interactivity, structure parsing, analysis)
-* Build a shared base of knowledge for contributors (Rust, Bevy, WASM)
-
-## Development setup
-
-### Prerequisites
-
-* Rust (latest stable)
-* cargo (comes with Rust)
-* For Bevy desktop builds: a working native toolchain (Linux, macOS, or Windows)
-* For WASM builds (later):
-
-  * wasm32-unknown-unknown target (`rustup target add wasm32-unknown-unknown`)
-  * wasm-bindgen or trunk
-
-### Running the project
-
-```bash
-# clone the repo
-git clone https://github.com/rs4rse/vizcrystal.git
-cd vizcrystal
-
-# run the desktop version
+```powershell
 cargo run
 ```
+
+### Linux
+
+Install Rust via `rustup`, then required system libraries.
+
+Ubuntu:
+
+```bash
+sudo apt install build-essential pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-dev mesa-vulkan-drivers vulkan-utils
+cargo run
+```
+
+Nix
+
+```bash
+nix develop
+```
+
+This drops you into a fully configured dev shell (Rust, tools, system deps).
+
+### macOS
+
+```bash
+brew install cmake pkg-config
+cargo run
+```
+
+(Bevy uses Metal; no Vulkan needed.)
+
+## wasm
+
+To run wasm version, install `trunk` and inside the repo run
+
+```console
+trunk serve
+```
+
+then open the link in your favorite browser. It require rustc target `wasm32-unknown-unknown` installed.
+
+(Bevy use wgpu)
 
 ## Roadmap
 
 * [x] Initial Bevy setup
-* [ ] Basic crystal visualization (desktop)
-* [ ] Browser support via WASM
+* [x] Basic crystal visualization (desktop)
+* [x] Browser support via WASM
 * [ ] Extend with interactivity and file parsing
-* [ ] Build community contributions
+* [x] Build community contributions
 
 ## Contributing
 
@@ -72,5 +80,8 @@ If you are new to Rust, Bevy, or visualization, this is the perfect playground.
 
 ## License
 
-MIT
+All contributions must retain this attribution.
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
