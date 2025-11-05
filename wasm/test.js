@@ -1,4 +1,4 @@
-import * as vizmat from "./vizmat.js"; // <-- relative path to vizmat.js
+import * as vizmat from "./vizmat.js";
 
 async function main() {
     await vizmat.start();

@@ -9,7 +9,7 @@
   "license": "MIT OR Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rs4rse/vizmat"
+    "url": "git+https://github.com/rs4rse/vizmat.git"
   },
   "files": [
     "vizmat_bg.wasm",
