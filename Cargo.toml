@@ -2,19 +2,37 @@
 name = "vizmat"
 version = "0.1.0"
 edition = "2021"
+description = "blob for every crates relate to ccmat utils, and crates."
+authors = ["rs4rse.github.io"]
+readme = "README.md"
+repository = "https://github.com/rs4rse/vizmat"
+homepage = "https://github.com/rs4rse/vizmat"
+license = "MIT OR Apache-2.0"
+keywords = ["science", "crystal", "material", "molecule"]
 
 [dependencies]
 bevy = { version = "0.16", features = ["default"] }
 anyhow = "1.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-bevy = { version = "0.16", features = ["webgl2"] }
+bevy = { version = "0.16" }
+wasm-bindgen = "0.2"
+
+[features]
+webgpu = ["bevy/webgpu"]
+webgl2 = ["bevy/webgl2"]
+
+# [lib]
+# # need both, cdylib for wasm, rlib for main.rs
+# crate-type = ["cdylib", "rlib"]
 
 # optimize for smaller WASM binary size
 [profile.release]
-opt-level = "z"
-lto = "thin"
+lto = true
+opt-level = 3
 codegen-units = 1
+incremental = false
+debug = false
 
 [profile.dev]
 opt-level = 1
