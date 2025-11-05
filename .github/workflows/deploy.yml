@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -16,22 +20,18 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-      - name: install wasm-bindgen-cli
-        run: |
-          cargo install wasm-bindgen-cli
 
       - name: Install wasm-pack
         run: |
-          curl https://drager.github.io/wasm-pack/installer/init.sh -sSf | sh
+          curl https://drager.github.io/wasm-pack/installer/init.sh -sSf | bash
+          # cargo install wasm-pack
 
       - name: Build WASM
         run: wasm-pack build --target web
 
       - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v6
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
           publish_dir: ./pkg
           keep_files: false
-          force_orphan: true
