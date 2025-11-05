@@ -1,8 +1,9 @@
-// test.js
-import init from "vizmat";
+import * as vizmat from "./vizmat.js"; // <-- relative path to vizmat.js
 
 async function main() {
-    await init();
+    await vizmat.start();
     console.log("WASM loaded ✅");
 }
+
 main();
+
