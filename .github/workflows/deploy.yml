@@ -24,14 +24,24 @@ jobs:
       - name: Install wasm-pack
         run: |
           curl https://drager.github.io/wasm-pack/installer/init.sh -sSf | bash
-          # cargo install wasm-pack
 
       - name: Build WASM
         run: wasm-pack build --target web
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+
+      - name: Install npm dependencies and build
+        run: |
+          cp ../wasm/* .
+          npm install
+          npm run build
+        working-directory: ./pkg
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./pkg
+          publish_dir: ./pkg/dist
           keep_files: false

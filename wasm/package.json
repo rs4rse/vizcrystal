@@ -30,14 +30,12 @@
     "material",
     "molecule"
   ],
-  "dependencies": {
-    "vizmat": "file:vizmat-0.1.0.tgz"
-  },
   "devDependencies": {
     "vite": "^5.0.0",
     "vite-plugin-wasm": "3.5.0"
   },
   "scripts": {
+    "build": "vite build",
     "dev": "vite"
   }
 }

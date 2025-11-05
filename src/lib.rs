@@ -16,7 +16,7 @@ use wasm_bindgen::prelude::*;
 
 /// Entry point for WASM
 #[cfg(target_arch = "wasm32")]
-#[wasm_bindgen(start)]
+#[wasm_bindgen]
 pub fn start() {
     run_app();
 }
