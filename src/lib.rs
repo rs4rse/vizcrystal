@@ -1,4 +1,3 @@
-// lib.rs
 use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
 
@@ -32,14 +31,14 @@ pub fn run_app() {
         }))
         .init_resource::<FileDragDrop>()
         .add_event::<bevy::window::FileDragAndDrop>()
-        .add_systems(Startup, (load_default_crystal, setup_scene, setup_camera, setup_file_ui).chain())
+        .add_systems(Startup, (load_default_crystal, setup_scene, setup_camera, setup_file_ui))
         .add_systems(Update, (
-            camera_controls,
             handle_file_drag_drop,
             load_dropped_file,
             update_crystal_from_file,
             update_file_ui,
             update_scene,
+            camera_controls,
         ))
         .run();
 }

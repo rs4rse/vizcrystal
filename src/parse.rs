@@ -1,6 +1,6 @@
+// parse.rs
 use crate::structure::{Atom, Crystal};
 use anyhow::{Context, Result};
-use std::collections::HashMap;
 
 // Function to parse XYZ file format from string content
 pub fn parse_xyz_content(contents: &str) -> Result<Crystal> {
@@ -17,13 +17,10 @@ pub fn parse_xyz_content(contents: &str) -> Result<Crystal> {
         .context("Failed to parse number of atoms")?;
 
     // Second line may contain comment or extended XYZ properties
-    let comment_line = lines[1].trim();
+    let _comment_line = lines[1].trim();
     
-    // Parse extended XYZ properties if present
-    let mut properties = HashMap::new();
-    if comment_line.starts_with("Lattice=\"") || comment_line.contains("Properties=") {
-        parse_extended_xyz_properties(comment_line, &mut properties);
-    }
+    // Parse extended XYZ properties if present (basic implementation)
+    // For now, we'll focus on the basic XYZ format
 
     let mut atoms = Vec::new();
 
@@ -48,16 +45,6 @@ pub fn parse_xyz_content(contents: &str) -> Result<Crystal> {
     }
 
     Ok(Crystal { atoms })
-}
-
-// Parse extended XYZ properties (basic implementation)
-fn parse_extended_xyz_properties(comment: &str, _properties: &mut HashMap<String, String>) {
-    // This is a simplified parser for extended XYZ format
-    // For full implementation, refer to: https://github.com/libAtoms/extxyz
-    if comment.starts_with("Lattice=\"") {
-        // Extract lattice parameters if needed
-    }
-    // Add more property parsing as needed
 }
 
 // Function to read XYZ file from path
