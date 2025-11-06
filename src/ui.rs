@@ -78,6 +78,21 @@ pub struct ToggleEvent {
     pub state: bool,
 }
 
+/// Stores camera orbit information and the original configuration so it can be restored.
+#[derive(Resource)]
+pub struct CameraRig {
+    pub target: Vec3,
+    pub distance: f32,
+    pub initial_target: Vec3,
+    pub initial_translation: Vec3,
+    pub initial_rotation: Quat,
+    pub initial_scale: Vec3,
+}
+
+/// Button that resets the camera to its original position/orientation.
+#[derive(Component)]
+pub struct ResetCameraButton;
+
 // System to set up the 3D scene
 pub(crate) fn setup_scene(
     mut commands: Commands,
@@ -137,6 +152,12 @@ pub fn setup_camera(mut commands: Commands, mut toggle_states: ResMut<ToggleStat
     let bottom_left_y = window.physical_height() - viewport_size.y - 10;
     let viewport_position = UVec2::new(10, bottom_left_y);
 
+    let camera_transform = Transform::from_xyz(5.0, 5.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y);
+    let initial_translation = camera_transform.translation;
+    let initial_rotation = camera_transform.rotation;
+    let initial_scale = camera_transform.scale;
+    let initial_target = Vec3::ZERO;
+
     // Spawn cameras
     let camera_entity = commands
         .spawn((
@@ -167,6 +188,14 @@ pub fn setup_camera(mut commands: Commands, mut toggle_states: ResMut<ToggleStat
 
     commands.insert_resource(MainCameraEntity(camera_entity));
     commands.insert_resource(MainLightEntity(light_entity));
+    commands.insert_resource(CameraRig {
+        target: initial_target,
+        distance: initial_translation.distance(initial_target),
+        initial_target,
+        initial_translation,
+        initial_rotation,
+        initial_scale,
+    });
 }
 
 // Setup minimal UI with a toggle button
@@ -326,10 +355,17 @@ pub(crate) fn camera_controls(
     mut mouse_wheel_events: EventReader<MouseWheel>,
     time: Res<Time>,
     toggle_states: Res<ToggleStates>,
+    mut camera_rig: ResMut<CameraRig>,
 ) {
     if let Ok(mut transform) = camera_query.single_mut() {
-        let mut rotation = Vec3::ZERO;
         let keyboard_mode = toggle_states.get(ToggleId::CameraControls);
+        let mut yaw_delta = 0.0;
+        let mut pitch_delta = 0.0;
+        let mut zoom_change = 0.0;
+        let mut pan_request = Vec2::ZERO;
+
+        const MIN_DISTANCE: f32 = 0.2;
+        const MAX_DISTANCE: f32 = 200.0;
 
         if keyboard_mode {
             // Drain motion events so they don't accumulate when switching modes later.
@@ -339,16 +375,24 @@ pub(crate) fn camera_controls(
             let rotation_speed = 1.0;
 
             if keyboard_input.pressed(KeyCode::ArrowLeft) {
-                rotation.y += rotation_speed * time.delta_secs();
+                yaw_delta += rotation_speed * time.delta_secs();
             }
             if keyboard_input.pressed(KeyCode::ArrowRight) {
-                rotation.y -= rotation_speed * time.delta_secs();
+                yaw_delta -= rotation_speed * time.delta_secs();
             }
             if keyboard_input.pressed(KeyCode::ArrowUp) {
-                rotation.x += rotation_speed * time.delta_secs();
+                pitch_delta += rotation_speed * time.delta_secs();
             }
             if keyboard_input.pressed(KeyCode::ArrowDown) {
-                rotation.x -= rotation_speed * time.delta_secs();
+                pitch_delta -= rotation_speed * time.delta_secs();
+            }
+
+            let zoom_speed = 1.5;
+            if keyboard_input.pressed(KeyCode::Equal) {
+                zoom_change -= zoom_speed * time.delta_secs();
+            }
+            if keyboard_input.pressed(KeyCode::Minus) {
+                zoom_change += zoom_speed * time.delta_secs();
             }
         } else {
             let mut mouse_delta = Vec2::ZERO;
@@ -358,41 +402,59 @@ pub(crate) fn camera_controls(
 
             if mouse_buttons.pressed(MouseButton::Left) {
                 let sensitivity = 0.005;
-                rotation.y -= mouse_delta.x * sensitivity;
-                rotation.x -= mouse_delta.y * sensitivity;
+                yaw_delta -= mouse_delta.x * sensitivity;
+                pitch_delta -= mouse_delta.y * sensitivity;
             }
 
-            let mut scroll_total = 0.0;
+            if mouse_buttons.pressed(MouseButton::Right) {
+                pan_request = mouse_delta;
+            }
+
             for wheel in mouse_wheel_events.read() {
-                scroll_total += wheel.y;
-            }
-
-            if scroll_total.abs() > f32::EPSILON {
-                let zoom_factor = 1.0 - scroll_total * 0.1;
-                transform.translation *= zoom_factor.clamp(0.2, 2.0);
+                zoom_change -= wheel.y * 0.2;
             }
         }
 
-        // Apply rotation around the center
-        if rotation != Vec3::ZERO {
-            let distance = transform.translation.length();
-            transform.rotate_around(
-                Vec3::ZERO,
-                Quat::from_euler(EulerRot::XYZ, rotation.x, rotation.y, 0.0),
-            );
-            transform.translation = transform.translation.normalize() * distance;
-            transform.look_at(Vec3::ZERO, Vec3::Y);
+        // Keep camera offset updated relative to target.
+        let mut offset = transform.translation - camera_rig.target;
+        if offset.length_squared() < f32::EPSILON {
+            offset = Vec3::new(0.0, 0.0, camera_rig.distance.max(1.0));
         }
 
-        // Zoom controls
-        if keyboard_mode {
-            let zoom_speed = 5.0;
-            if keyboard_input.pressed(KeyCode::Equal) {
-                transform.translation *= 1.0 - zoom_speed * time.delta_secs();
-            }
-            if keyboard_input.pressed(KeyCode::Minus) {
-                transform.translation *= 1.0 + zoom_speed * time.delta_secs();
-            }
+        if yaw_delta != 0.0 || pitch_delta != 0.0 {
+            let rotation = Quat::from_euler(EulerRot::XYZ, pitch_delta, yaw_delta, 0.0);
+            offset = rotation * offset;
         }
+
+        if pan_request != Vec2::ZERO {
+            let distance = offset.length().max(MIN_DISTANCE);
+            let forward = (-offset).normalize_or_zero();
+            let mut right = forward.cross(Vec3::Y).normalize_or_zero();
+            if right.length_squared() < f32::EPSILON {
+                right = Vec3::X;
+            }
+            let up = right.cross(forward).normalize_or_zero();
+            let pan_speed = 0.002 * distance;
+            let pan_offset = (-pan_request.x * right + pan_request.y * up) * pan_speed;
+            camera_rig.target += pan_offset;
+        }
+
+        let mut distance = offset.length().max(MIN_DISTANCE);
+        if zoom_change != 0.0 {
+            let factor = (1.0 + zoom_change).clamp(0.2, 5.0);
+            distance = (distance * factor).clamp(MIN_DISTANCE, MAX_DISTANCE);
+        }
+
+        let direction = offset.normalize_or_zero();
+        offset = if direction.length_squared() > 0.0 {
+            direction * distance
+        } else {
+            Vec3::new(0.0, 0.0, distance)
+        };
+
+        transform.translation = camera_rig.target + offset;
+        transform.look_at(camera_rig.target, Vec3::Y);
+        transform.scale = Vec3::ONE;
+        camera_rig.distance = distance;
     }
 }

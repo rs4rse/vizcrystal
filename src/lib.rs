@@ -50,6 +50,7 @@ pub fn run_app() {
                 update_crystal_system,
                 refresh_atoms_system,
                 toggle_button_interaction,
+                reset_camera_button_interaction,
                 handle_toggle_events,
                 camera_controls,
             ),
