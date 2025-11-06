@@ -97,12 +97,64 @@ pub(crate) struct CameraRig {
 #[derive(Component)]
 pub(crate) struct ResetCameraButton;
 
+// System to clear existing atoms when new crystal is loaded
+pub fn clear_old_atoms(
+    mut commands: Commands,
+    atom_query: Query<Entity, With<AtomEntity>>,
+    crystal: Res<Crystal>,
+) {
+    // This is a simple approach - clear all atoms and respawn when crystal changes
+    // In a more advanced version, you might want to track changes more precisely
+    for entity in atom_query.iter() {
+        commands.entity(entity).despawn();
+    }
+}
+
 // System to set up the 3D scene
 pub(crate) fn setup_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     crystal: Res<Crystal>,
+) {
+    // Only spawn atoms if we have a crystal resource
+    spawn_atoms(&mut commands, &mut meshes, &mut materials, &crystal);
+    
+    // Add ambient light
+    commands.insert_resource(AmbientLight {
+        color: Color::WHITE,
+        brightness: 0.3,
+        affects_lightmapped_meshes: false,
+    });
+}
+
+// System to respawn atoms when crystal changes
+pub fn update_scene(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    crystal: Res<Crystal>,
+    mut atom_query: Query<Entity, With<AtomEntity>>,
+) {
+    if crystal.is_changed() {
+        // Clear existing atoms
+        for entity in atom_query.iter_mut() {
+            commands.entity(entity).despawn();
+        }
+        
+        // Spawn new atoms
+        spawn_atoms(&mut commands, &mut meshes, &mut materials, &crystal);
+        
+        println!("Scene updated with new crystal structure");
+    }
+}
+
+// Helper function to spawn atoms
+fn spawn_atoms(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+    crystal: &Crystal,
 ) {
     // Create a sphere mesh for atoms
     let sphere_mesh = meshes.add(Mesh::from(Sphere { radius: 1.0 }));
@@ -136,15 +188,6 @@ pub(crate) fn setup_scene(
             AtomEntity,
         ));
     }
-
-    // Remove static scene light; lighting will be attached to the camera in setup_camera
-
-    // Add ambient light
-    commands.insert_resource(AmbientLight {
-        color: Color::WHITE,
-        brightness: 0.3,
-        affects_lightmapped_meshes: false,
-    });
 }
 
 // System to set up the camera
