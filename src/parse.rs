@@ -18,7 +18,7 @@ pub fn parse_xyz_content(contents: &str) -> Result<Crystal> {
 
     // Second line may contain comment or extended XYZ properties
     let _comment_line = lines[1].trim();
-    
+
     // Parse extended XYZ properties if present (basic implementation)
     // For now, we'll focus on the basic XYZ format
 
@@ -50,7 +50,7 @@ pub fn parse_xyz_content(contents: &str) -> Result<Crystal> {
 // Function to read XYZ file from path
 #[allow(dead_code)]
 pub fn read_xyz_file(path: &str) -> Result<Crystal> {
-    let contents = std::fs::read_to_string(path)
-        .context(format!("Failed to read XYZ file: {}", path))?;
+    let contents =
+        std::fs::read_to_string(path).context(format!("Failed to read XYZ file: {}", path))?;
     parse_xyz_content(&contents)
 }

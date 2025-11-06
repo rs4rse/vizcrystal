@@ -46,10 +46,7 @@ pub fn update_file_ui(
 
 // System to clear existing atoms when new crystal is loaded
 #[allow(dead_code)]
-pub fn clear_old_atoms(
-    mut commands: Commands,
-    atom_query: Query<Entity, With<AtomEntity>>,
-) {
+pub fn clear_old_atoms(mut commands: Commands, atom_query: Query<Entity, With<AtomEntity>>) {
     for entity in atom_query.iter() {
         commands.entity(entity).despawn();
     }
@@ -64,7 +61,7 @@ pub fn setup_scene(
 ) {
     // Only spawn atoms if we have a crystal resource
     spawn_atoms(&mut commands, &mut meshes, &mut materials, &crystal);
-    
+
     // Add ambient light
     commands.insert_resource(AmbientLight {
         color: Color::WHITE,
@@ -86,10 +83,10 @@ pub fn update_scene(
         for entity in atom_query.iter() {
             commands.entity(entity).despawn();
         }
-        
+
         // Spawn new atoms
         spawn_atoms(&mut commands, &mut meshes, &mut materials, &crystal);
-        
+
         println!("Scene updated with new crystal structure");
     }
 }
