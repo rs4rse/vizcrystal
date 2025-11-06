@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
 
 use crate::constants::{get_element_color, get_element_size};
@@ -9,6 +10,7 @@ use crate::structure::{AtomEntity, Crystal};
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum ToggleId {
     LightAttachment,
+    CameraControls,
 }
 
 impl ToggleId {
@@ -16,6 +18,8 @@ impl ToggleId {
         match (self, state) {
             (ToggleId::LightAttachment, true) => "Light: Attached",
             (ToggleId::LightAttachment, false) => "Light: Detached",
+            (ToggleId::CameraControls, true) => "Controls: Keyboard",
+            (ToggleId::CameraControls, false) => "Controls: Mouse",
         }
     }
 }
@@ -140,6 +144,7 @@ pub fn setup_camera(mut commands: Commands, mut toggle_states: ResMut<ToggleStat
         .id();
 
     toggle_states.register(ToggleId::LightAttachment, true);
+    toggle_states.register(ToggleId::CameraControls, true);
 
     commands.insert_resource(MainCameraEntity(camera_entity));
     commands.insert_resource(MainLightEntity(light_entity));
@@ -147,8 +152,6 @@ pub fn setup_camera(mut commands: Commands, mut toggle_states: ResMut<ToggleStat
 
 // Setup minimal UI with a toggle button
 pub fn setup_ui(mut commands: Commands, toggle_states: Res<ToggleStates>) {
-    let label = ToggleId::LightAttachment.label(toggle_states.get(ToggleId::LightAttachment));
-
     // Root node in top-left
     commands
         .spawn((
@@ -156,39 +159,41 @@ pub fn setup_ui(mut commands: Commands, toggle_states: Res<ToggleStates>) {
                 position_type: PositionType::Absolute,
                 left: Val::Px(12.0),
                 top: Val::Px(12.0),
+                flex_direction: FlexDirection::Column,
+                row_gap: Val::Px(8.0),
                 ..default()
             },
             BackgroundColor(Color::NONE),
         ))
         .with_children(|parent| {
-            parent
-                .spawn((
-                    Button,
-                    Node {
-                        padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
-                        border: UiRect::all(Val::Px(1.0)),
-                        ..default()
-                    },
-                    BorderColor(Color::srgb(0.3, 0.3, 0.3)),
-                    BackgroundColor(Color::srgb(0.15, 0.15, 0.15)),
-                    ToggleButton {
-                        id: ToggleId::LightAttachment,
-                    },
-                ))
-                .with_children(|button| {
-                    button.spawn((
-                        Text::new(label),
-                        TextFont {
-                            font: default(),
-                            font_size: 16.0,
+            for toggle_id in [ToggleId::LightAttachment, ToggleId::CameraControls] {
+                let label = ToggleId::label(toggle_id, toggle_states.get(toggle_id));
+                let current_id = toggle_id;
+                parent
+                    .spawn((
+                        Button,
+                        Node {
+                            padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
+                            border: UiRect::all(Val::Px(1.0)),
                             ..default()
                         },
-                        TextColor(Color::WHITE),
-                        ToggleText {
-                            id: ToggleId::LightAttachment,
-                        },
-                    ));
-                });
+                        BorderColor(Color::srgb(0.3, 0.3, 0.3)),
+                        BackgroundColor(Color::srgb(0.15, 0.15, 0.15)),
+                        ToggleButton { id: current_id },
+                    ))
+                    .with_children(|button| {
+                        button.spawn((
+                            Text::new(label),
+                            TextFont {
+                                font: default(),
+                                font_size: 16.0,
+                                ..default()
+                            },
+                            TextColor(Color::WHITE),
+                            ToggleText { id: current_id },
+                        ));
+                    });
+            }
         });
 }
 
@@ -266,6 +271,9 @@ pub fn handle_toggle_events(
                     commands.entity(light_entity.0).remove::<ChildOf>();
                 }
             }
+            ToggleId::CameraControls => {
+                // No immediate world action; camera system reads the toggle state directly.
+            }
         }
     }
 }
@@ -274,23 +282,56 @@ pub fn handle_toggle_events(
 pub fn camera_controls(
     mut camera_query: Query<&mut Transform, With<Camera3d>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
+    mouse_buttons: Res<ButtonInput<MouseButton>>,
+    mut mouse_motion_events: EventReader<MouseMotion>,
+    mut mouse_wheel_events: EventReader<MouseWheel>,
     time: Res<Time>,
+    toggle_states: Res<ToggleStates>,
 ) {
     if let Ok(mut transform) = camera_query.single_mut() {
         let mut rotation = Vec3::ZERO;
-        let rotation_speed = 1.0;
+        let keyboard_mode = toggle_states.get(ToggleId::CameraControls);
 
-        if keyboard_input.pressed(KeyCode::ArrowLeft) {
-            rotation.y += rotation_speed * time.delta_secs();
-        }
-        if keyboard_input.pressed(KeyCode::ArrowRight) {
-            rotation.y -= rotation_speed * time.delta_secs();
-        }
-        if keyboard_input.pressed(KeyCode::ArrowUp) {
-            rotation.x += rotation_speed * time.delta_secs();
-        }
-        if keyboard_input.pressed(KeyCode::ArrowDown) {
-            rotation.x -= rotation_speed * time.delta_secs();
+        if keyboard_mode {
+            // Drain motion events so they don't accumulate when switching modes later.
+            for _ in mouse_motion_events.read() {}
+            for _ in mouse_wheel_events.read() {}
+
+            let rotation_speed = 1.0;
+
+            if keyboard_input.pressed(KeyCode::ArrowLeft) {
+                rotation.y += rotation_speed * time.delta_secs();
+            }
+            if keyboard_input.pressed(KeyCode::ArrowRight) {
+                rotation.y -= rotation_speed * time.delta_secs();
+            }
+            if keyboard_input.pressed(KeyCode::ArrowUp) {
+                rotation.x += rotation_speed * time.delta_secs();
+            }
+            if keyboard_input.pressed(KeyCode::ArrowDown) {
+                rotation.x -= rotation_speed * time.delta_secs();
+            }
+        } else {
+            let mut mouse_delta = Vec2::ZERO;
+            for motion in mouse_motion_events.read() {
+                mouse_delta += motion.delta;
+            }
+
+            if mouse_buttons.pressed(MouseButton::Left) {
+                let sensitivity = 0.005;
+                rotation.y -= mouse_delta.x * sensitivity;
+                rotation.x -= mouse_delta.y * sensitivity;
+            }
+
+            let mut scroll_total = 0.0;
+            for wheel in mouse_wheel_events.read() {
+                scroll_total += wheel.y;
+            }
+
+            if scroll_total.abs() > f32::EPSILON {
+                let zoom_factor = 1.0 - scroll_total * 0.1;
+                transform.translation *= zoom_factor.clamp(0.2, 2.0);
+            }
         }
 
         // Apply rotation around the center
@@ -305,12 +346,14 @@ pub fn camera_controls(
         }
 
         // Zoom controls
-        let zoom_speed = 5.0;
-        if keyboard_input.pressed(KeyCode::Equal) {
-            transform.translation *= 1.0 - zoom_speed * time.delta_secs();
-        }
-        if keyboard_input.pressed(KeyCode::Minus) {
-            transform.translation *= 1.0 + zoom_speed * time.delta_secs();
+        if keyboard_mode {
+            let zoom_speed = 5.0;
+            if keyboard_input.pressed(KeyCode::Equal) {
+                transform.translation *= 1.0 - zoom_speed * time.delta_secs();
+            }
+            if keyboard_input.pressed(KeyCode::Minus) {
+                transform.translation *= 1.0 + zoom_speed * time.delta_secs();
+            }
         }
     }
 }
