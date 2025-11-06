@@ -1,16 +1,107 @@
+// ui.rs (add these systems)
 use bevy::prelude::*;
-
 use std::collections::HashMap;
 
 use crate::constants::{get_element_color, get_element_size};
 use crate::structure::{AtomEntity, Crystal};
 
-// System to set up the 3D scene
+// Component for UI text
+#[derive(Component)]
+struct FileUploadText;
+
+// System to set up file upload UI
+pub fn setup_file_ui(mut commands: Commands) {
+    commands.spawn((
+        TextBundle::from_section(
+            "Drag and drop an XYZ file here to visualize",
+            TextStyle {
+                font_size: 20.0,
+                color: Color::WHITE,
+                ..default()
+            },
+        )
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            top: Val::Px(10.0),
+            left: Val::Px(10.0),
+            ..default()
+        }),
+        FileUploadText,
+    ));
+}
+
+// System to update file upload UI
+pub fn update_file_ui(
+    file_drag_drop: Res<crate::io::FileDragDrop>,
+    mut text_query: Query<&mut Text, With<FileUploadText>>,
+) {
+    if let Ok(mut text) = text_query.get_single_mut() {
+        if let Some(ref path) = file_drag_drop.dragged_file {
+            if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                text.sections[0].value = format!("Loaded: {}", file_name);
+            }
+        }
+    }
+}
+
+// System to clear existing atoms when new crystal is loaded
+pub fn clear_old_atoms(
+    mut commands: Commands,
+    atom_query: Query<Entity, With<AtomEntity>>,
+    crystal: Res<Crystal>,
+) {
+    // This is a simple approach - clear all atoms and respawn when crystal changes
+    // In a more advanced version, you might want to track changes more precisely
+    for entity in atom_query.iter() {
+        commands.entity(entity).despawn();
+    }
+}
+
+// Updated setup_scene to handle crystal changes
 pub fn setup_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     crystal: Res<Crystal>,
+) {
+    // Only spawn atoms if we have a crystal resource
+    spawn_atoms(&mut commands, &mut meshes, &mut materials, &crystal);
+    
+    // Add ambient light
+    commands.insert_resource(AmbientLight {
+        color: Color::WHITE,
+        brightness: 0.3,
+        affects_lightmapped_meshes: false,
+    });
+}
+
+// System to respawn atoms when crystal changes
+pub fn update_scene(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    crystal: Res<Crystal>,
+    mut atom_query: Query<Entity, With<AtomEntity>>,
+) {
+    if crystal.is_changed() {
+        // Clear existing atoms
+        for entity in atom_query.iter_mut() {
+            commands.entity(entity).despawn();
+        }
+        
+        // Spawn new atoms
+        spawn_atoms(&mut commands, &mut meshes, &mut materials, &crystal);
+        
+        println!("Scene updated with new crystal structure");
+    }
+}
+
+// Helper function to spawn atoms
+fn spawn_atoms(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+    crystal: &Crystal,
 ) {
     // Create a sphere mesh for atoms
     let sphere_mesh = meshes.add(Mesh::from(Sphere { radius: 1.0 }));
@@ -44,15 +135,6 @@ pub fn setup_scene(
             AtomEntity,
         ));
     }
-
-    // Remove static scene light; lighting will be attached to the camera in setup_camera
-
-    // Add ambient light
-    commands.insert_resource(AmbientLight {
-        color: Color::WHITE,
-        brightness: 0.3,
-        affects_lightmapped_meshes: false,
-    });
 }
 
 // System to set up the camera
