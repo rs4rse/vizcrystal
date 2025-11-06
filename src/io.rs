@@ -1,8 +1,9 @@
+// io.rs
 use bevy::prelude::*;
 use std::path::PathBuf;
 
-use crate::structure::{Atom, Crystal};
 use crate::parse::parse_xyz_content;
+use crate::structure::{Atom, Crystal};
 
 // System to load default crystal data
 pub fn load_default_crystal(mut commands: Commands) {
@@ -50,7 +51,7 @@ pub fn handle_file_drag_drop(
         match event {
             bevy::window::FileDragAndDrop::DroppedFile { path_buf, .. } => {
                 println!("File dropped: {:?}", path_buf);
-                
+
                 if let Some(extension) = path_buf.extension() {
                     if extension == "xyz" {
                         file_drag_drop.dragged_file = Some(path_buf.clone());
@@ -62,7 +63,7 @@ pub fn handle_file_drag_drop(
             bevy::window::FileDragAndDrop::HoveredFile { path_buf, .. } => {
                 println!("File hovered: {:?}", path_buf);
             }
-            bevy::window::FileDragAndDrop::HoveredFileCanceled => {
+            bevy::window::FileDragAndDrop::HoveredFileCanceled { .. } => {
                 println!("File hover canceled");
             }
         }
@@ -71,25 +72,22 @@ pub fn handle_file_drag_drop(
 
 // System to load crystal from dropped file
 pub fn load_dropped_file(
-    mut commands: Commands,
     mut file_drag_drop: ResMut<FileDragDrop>,
     mut crystal_loaded: Local<bool>,
 ) {
     if let Some(ref path) = file_drag_drop.dragged_file {
         if !*crystal_loaded {
             match std::fs::read_to_string(path) {
-                Ok(contents) => {
-                    match parse_xyz_content(&contents) {
-                        Ok(crystal) => {
-                            println!("Successfully loaded crystal from: {:?}", path);
-                            file_drag_drop.loaded_crystal = Some(crystal);
-                            *crystal_loaded = true;
-                        }
-                        Err(e) => {
-                            eprintln!("Failed to parse XYZ file: {}", e);
-                        }
+                Ok(contents) => match parse_xyz_content(&contents) {
+                    Ok(crystal) => {
+                        println!("Successfully loaded crystal from: {:?}", path);
+                        file_drag_drop.loaded_crystal = Some(crystal);
+                        *crystal_loaded = true;
                     }
-                }
+                    Err(e) => {
+                        eprintln!("Failed to parse XYZ file: {}", e);
+                    }
+                },
                 Err(e) => {
                     eprintln!("Failed to read file: {}", e);
                 }
@@ -104,7 +102,7 @@ pub fn update_crystal_from_file(
     file_drag_drop: Res<FileDragDrop>,
     current_crystal: Option<Res<Crystal>>,
 ) {
-    if let Some(ref crystal) = file_drag_drop.loaded_crystal {
+    if let Some(crystal) = &file_drag_drop.loaded_crystal {
         // Only update if this is a new crystal
         if let Some(current) = current_crystal {
             if current.atoms.len() != crystal.atoms.len() {

@@ -1,4 +1,3 @@
-// lib.rs
 use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
 

@@ -31,6 +31,46 @@ impl ToggleId {
     }
 }
 
+// Component for UI text
+#[derive(Component)]
+pub(crate) struct FileUploadText;
+
+// System to set up file upload UI
+pub fn setup_file_ui(mut commands: Commands) {
+    commands.spawn((
+        Text::new("Drag and drop an XYZ file here to visualize"),
+        TextFont {
+            font_size: 20.0,
+            ..default()
+        },
+        TextColor(Color::WHITE),
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(10.0),
+            left: Val::Px(10.0),
+            ..default()
+        },
+        FileUploadText,
+    ));
+}
+
+// System to update file upload UI
+pub fn update_file_ui(
+    file_drag_drop: Res<crate::io::FileDragDrop>,
+    mut text_query: Query<&mut Text, With<FileUploadText>>,
+) {
+    if let Ok(mut text) = text_query.single_mut() {
+        if let Some(ref path) = file_drag_drop.dragged_file {
+            if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                // Update the text content
+                **text = format!("Loaded: {}", file_name);
+            }
+        } else {
+            **text = "Drag and drop an XYZ file here to visualize".to_string();
+        }
+    }
+}
+
 // XXX: REVIEW: this is very oop like implementation, better?
 
 /// Stores the current on/off state for each toggle.
@@ -98,13 +138,8 @@ pub(crate) struct CameraRig {
 pub(crate) struct ResetCameraButton;
 
 // System to clear existing atoms when new crystal is loaded
-pub fn clear_old_atoms(
-    mut commands: Commands,
-    atom_query: Query<Entity, With<AtomEntity>>,
-    crystal: Res<Crystal>,
-) {
-    // This is a simple approach - clear all atoms and respawn when crystal changes
-    // In a more advanced version, you might want to track changes more precisely
+#[allow(dead_code)]
+pub fn clear_old_atoms(mut commands: Commands, atom_query: Query<Entity, With<AtomEntity>>) {
     for entity in atom_query.iter() {
         commands.entity(entity).despawn();
     }
@@ -119,12 +154,12 @@ pub(crate) fn setup_scene(
 ) {
     // Only spawn atoms if we have a crystal resource
     spawn_atoms(&mut commands, &mut meshes, &mut materials, &crystal);
-    
+
     // Add ambient light
     commands.insert_resource(AmbientLight {
         color: Color::WHITE,
         brightness: 0.3,
-        affects_lightmapped_meshes: false,
+        ..default()
     });
 }
 
@@ -134,17 +169,17 @@ pub fn update_scene(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     crystal: Res<Crystal>,
-    mut atom_query: Query<Entity, With<AtomEntity>>,
+    atom_query: Query<Entity, With<AtomEntity>>,
 ) {
     if crystal.is_changed() {
         // Clear existing atoms
-        for entity in atom_query.iter_mut() {
+        for entity in atom_query.iter() {
             commands.entity(entity).despawn();
         }
-        
+
         // Spawn new atoms
         spawn_atoms(&mut commands, &mut meshes, &mut materials, &crystal);
-        
+
         println!("Scene updated with new crystal structure");
     }
 }
@@ -157,7 +192,7 @@ fn spawn_atoms(
     crystal: &Crystal,
 ) {
     // Create a sphere mesh for atoms
-    let sphere_mesh = meshes.add(Mesh::from(Sphere { radius: 1.0 }));
+    let sphere_mesh = meshes.add(Sphere::new(1.0));
 
     // Create materials for different elements
     let mut element_materials: HashMap<String, Handle<StandardMaterial>> = HashMap::new();
@@ -180,11 +215,8 @@ fn spawn_atoms(
         commands.spawn((
             Mesh3d(sphere_mesh.clone()),
             MeshMaterial3d(material),
-            Transform {
-                translation: Vec3::new(atom.x, atom.y, atom.z),
-                scale: Vec3::splat(get_element_size(&atom.element)),
-                ..default()
-            },
+            Transform::from_xyz(atom.x, atom.y, atom.z)
+                .with_scale(Vec3::splat(get_element_size(&atom.element))),
             AtomEntity,
         ));
     }
@@ -221,14 +253,13 @@ pub fn setup_cameras(
             MainCamera,
         ))
         .with_children(|parent| {
-            // Attach a directional light to the camera so it always points where the camera looks
-            // For directional lights, only rotation matters; translation is ignored
+            // Attach a directional light to the camera
             parent.spawn((
                 DirectionalLight {
                     shadows_enabled: true,
                     ..default()
                 },
-                Transform::default(), // inherit camera rotation; light points along -Z in local space
+                Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_4)),
             ));
         })
         .with_children(|parent| {
