@@ -10,8 +10,8 @@ pub(crate) mod structure;
 
 use crate::io::load_crystal;
 use crate::ui::{
-    camera_controls, handle_toggle_events, setup_camera, setup_scene, setup_ui,
-    toggle_button_interaction, ToggleEvent, ToggleStates,
+    camera_controls, handle_toggle_events, reset_camera_button_interaction, setup_camera,
+    setup_scene, setup_ui, toggle_button_interaction, ToggleEvent, ToggleStates,
 };
 
 #[cfg(target_arch = "wasm32")]
@@ -42,6 +42,7 @@ pub fn run_app() {
             Update,
             (
                 toggle_button_interaction,
+                reset_camera_button_interaction,
                 handle_toggle_events,
                 camera_controls,
             ),
