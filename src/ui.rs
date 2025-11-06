@@ -1,14 +1,78 @@
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 use bevy::render::camera::Viewport;
 use bevy::render::view::RenderLayers;
-
-use std::collections::HashMap;
 
 use crate::constants::{get_element_color, get_element_size};
 use crate::structure::{AtomEntity, Crystal};
 
 #[derive(Component)]
 pub(crate) struct MainCamera;
+
+/// Identifier for a reusable toggle interaction.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum ToggleId {
+    LightAttachment,
+}
+
+impl ToggleId {
+    fn label(self, state: bool) -> &'static str {
+        match (self, state) {
+            (ToggleId::LightAttachment, true) => "Light: Attached",
+            (ToggleId::LightAttachment, false) => "Light: Detached",
+        }
+    }
+}
+
+/// Stores the current on/off state for each toggle.
+#[derive(Resource, Default)]
+pub struct ToggleStates {
+    states: HashMap<ToggleId, bool>,
+}
+
+impl ToggleStates {
+    pub fn register(&mut self, id: ToggleId, initial_state: bool) {
+        self.states.entry(id).or_insert(initial_state);
+    }
+
+    pub fn get(&self, id: ToggleId) -> bool {
+        self.states.get(&id).copied().unwrap_or(false)
+    }
+
+    pub fn toggle(&mut self, id: ToggleId) -> bool {
+        let new_state = !self.get(id);
+        self.states.insert(id, new_state);
+        new_state
+    }
+}
+
+/// Marks an entity that spawned the main camera.
+#[derive(Resource)]
+pub struct MainCameraEntity(pub Entity);
+
+/// Marks the primary directional light used for shading.
+#[derive(Resource)]
+pub struct MainLightEntity(pub Entity);
+
+/// Component identifying a toggle button instance.
+#[derive(Component)]
+pub struct ToggleButton {
+    pub id: ToggleId,
+}
+
+/// Component carried by the text to update when a toggle changes.
+#[derive(Component)]
+pub struct ToggleText {
+    pub id: ToggleId,
+}
+
+/// Event emitted whenever a toggle switches state.
+#[derive(Event)]
+pub struct ToggleEvent {
+    pub id: ToggleId,
+    pub state: bool,
+}
 
 // System to set up the 3D scene
 pub(crate) fn setup_scene(
@@ -63,14 +127,14 @@ pub(crate) fn setup_scene(
 const GIZMO_LAYER: RenderLayers = RenderLayers::layer(1);
 
 // System to set up the camera
-pub(crate) fn setup_cameras(mut commands: Commands, windows: Query<&Window>) {
+pub fn setup_camera(mut commands: Commands, mut toggle_states: ResMut<ToggleStates>, windows: Query<&Window>) {
     let window = windows.single().unwrap();
     let viewport_size = UVec2::new(200, 200);
     let bottom_left_y = window.physical_height() - viewport_size.y - 10;
     let viewport_position = UVec2::new(10, bottom_left_y);
 
     // Spawn cameras
-    commands
+    let camera_entity = commands
         .spawn((
             Camera3d::default(),
             Camera {
@@ -80,6 +144,40 @@ pub(crate) fn setup_cameras(mut commands: Commands, windows: Query<&Window>) {
             Transform::from_xyz(5.0, 5.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
             RenderLayers::layer(0),
             MainCamera,
+        ))
+        .id();
+
+    let light_entity = commands
+        .spawn((
+            DirectionalLight {
+                shadows_enabled: true,
+                ..default()
+            },
+            Transform::default(), // inherit camera rotation; light points along -Z in local space
+            ChildOf(camera_entity),
+        ))
+        .id();
+
+    toggle_states.register(ToggleId::LightAttachment, true);
+
+    commands.insert_resource(MainCameraEntity(camera_entity));
+    commands.insert_resource(MainLightEntity(light_entity));
+}
+
+// Setup minimal UI with a toggle button
+pub fn setup_ui(mut commands: Commands, toggle_states: Res<ToggleStates>) {
+    let label = ToggleId::LightAttachment.label(toggle_states.get(ToggleId::LightAttachment));
+
+    // Root node in top-left
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(12.0),
+                top: Val::Px(12.0),
+                ..default()
+            },
+            BackgroundColor(Color::NONE),
         ))
         .with_children(|parent| {
             // Attach a directional light to the camera so it always points where the camera looks
