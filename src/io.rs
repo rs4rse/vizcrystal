@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 
-use crate::structure::{Atom, Crystal};
+use crate::structure::{Atom, Molecule};
 // System to load crystal data
 pub fn load_crystal(mut commands: Commands) {
     // For now, use the default water molecule structure
     // In the future, this can be extended to load from embedded assets or user input
     println!("Loading default water molecule structure");
 
-    let crystal = Crystal {
+    let molecule = Molecule {
         atoms: vec![
             Atom {
                 element: "O".to_string(),
@@ -30,5 +30,5 @@ pub fn load_crystal(mut commands: Commands) {
         ],
     };
 
-    commands.insert_resource(crystal);
+    commands.insert_resource(molecule);
 }

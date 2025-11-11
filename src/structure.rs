@@ -13,7 +13,7 @@ pub struct Atom {
 
 // Structure to hold our crystal data
 #[derive(Resource)]
-pub struct Crystal {
+pub struct Molecule {
     pub atoms: Vec<Atom>,
 }
 

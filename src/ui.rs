@@ -3,14 +3,14 @@ use bevy::prelude::*;
 use std::collections::HashMap;
 
 use crate::constants::{get_element_color, get_element_size};
-use crate::structure::{AtomEntity, Crystal};
+use crate::structure::{AtomEntity, Molecule};
 
 // System to set up the 3D scene
 pub fn setup_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    crystal: Res<Crystal>,
+    molecule: Res<Molecule>,
 ) {
     // Create a sphere mesh for atoms
     let sphere_mesh = meshes.add(Mesh::from(Sphere { radius: 1.0 }));
