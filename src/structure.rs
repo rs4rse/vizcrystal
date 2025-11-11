@@ -3,7 +3,7 @@ use bevy::prelude::*;
 // Structure to represent an atom from XYZ file
 // `#` is a macro. no inheritance. close to python decorator. injecting on top of something.
 // traits are like interfaces.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Atom {
     pub element: String,
     pub x: f32,
@@ -12,7 +12,7 @@ pub struct Atom {
 }
 
 // Structure to hold our crystal data
-#[derive(Resource)]
+#[derive(Resource, Clone)]
 pub struct Crystal {
     pub atoms: Vec<Atom>,
 }
