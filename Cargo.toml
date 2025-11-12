@@ -33,10 +33,6 @@ js-sys = "0.3"
 webgpu = ["bevy/webgpu"]
 webgl2 = ["bevy/webgl2"]
 
-[[bin]]
-name = "server"
-path = "src/server.rs"
-required-features = []
 
 [lib]
 # need both, cdylib for wasm, rlib for main.rs
