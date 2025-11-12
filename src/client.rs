@@ -1,5 +1,5 @@
 // WebSocket client module for connecting to structure update server
-// Supports both native (tokio-tungstenite) and WASM (web-sys) targets
+// Supports both native (async-tungstenite) and WASM (web-sys) targets
 
 use crate::structure::{Atom, UpdateStructure};
 use bevy::prelude::*;
@@ -65,59 +65,54 @@ pub fn poll_websocket_stream(
     }
 }
 
-// Native WebSocket client using tokio-tungstenite
+// Native WebSocket client using async-tungstenite run on async_std runtime
 #[cfg(not(target_arch = "wasm32"))]
 fn setup_native_websocket(tx: Sender<UpdateStructure>) {
-    use futures_util::StreamExt;
-    use tokio_tungstenite::{connect_async, tungstenite::Message};
+    use bevy::tasks::IoTaskPool;
 
-    std::thread::spawn(move || {
-        let runtime = tokio::runtime::Runtime::new().unwrap();
-        runtime.block_on(async {
-            let url = "ws://127.0.0.1:9001";
-            println!("Connecting to WebSocket server: {}", url);
+    let pool = IoTaskPool::get();
 
-            match connect_async(url).await {
-                Ok((ws_stream, _)) => {
-                    println!("Connected to WebSocket server");
-                    let (_, mut read) = ws_stream.split();
+    pool.spawn(async move {
+        let url = "ws://127.0.0.1:9001";
+        println!("Connecting to WS: {url}");
 
-                    while let Some(msg) = read.next().await {
-                        match msg {
-                            Ok(Message::Text(text)) => {
-                                if let Ok(structure_msg) =
-                                    serde_json::from_str::<StructureMessage>(&text)
-                                {
-                                    let atoms: Vec<Atom> = structure_msg
-                                        .atoms
-                                        .into_iter()
-                                        .map(|a| a.into())
-                                        .collect();
+        match async_tungstenite::async_std::connect_async(url).await {
+            Ok((ws_stream, _)) => {
+                use futures_util::StreamExt;
 
-                                    if tx.send(UpdateStructure { atoms }).is_err() {
-                                        println!("Failed to send update, channel closed");
-                                        break;
-                                    }
+                println!("Connected!");
+                let (_, mut read) = ws_stream.split();
+
+                while let Some(msg) = read.next().await {
+                    match msg {
+                        Ok(async_tungstenite::tungstenite::Message::Text(text)) => {
+                            if let Ok(structure_msg) =
+                                serde_json::from_str::<StructureMessage>(&text)
+                            {
+                                let atoms = structure_msg
+                                    .atoms.into_iter().map(std::convert::Into::into).collect();
+
+                                if tx.send(UpdateStructure { atoms }).is_err() {
+                                    println!("Bevy channel closed");
+                                    break;
                                 }
                             }
-                            Ok(Message::Close(_)) => {
-                                println!("WebSocket closed by server");
-                                break;
-                            }
-                            Err(e) => {
-                                eprintln!("WebSocket error: {}", e);
-                                break;
-                            }
-                            _ => {}
                         }
+                        Ok(async_tungstenite::tungstenite::Message::Close(_)) => {
+                            println!("Server closed WebSocket");
+                            break;
+                        }
+                        Err(e) => {
+                            eprintln!("WS error: {}", e);
+                            break;
+                        }
+                        _ => {}
                     }
                 }
-                Err(e) => {
-                    eprintln!("Failed to connect to WebSocket server: {}", e);
-                }
             }
-        });
-    });
+            Err(e) => eprintln!("Failed to connect WS: {}", e),
+        }
+    }).detach();
 }
 
 // WASM WebSocket client using web-sys
