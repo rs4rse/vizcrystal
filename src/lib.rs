@@ -7,9 +7,12 @@ pub(crate) mod ui;
 pub(crate) mod constants;
 pub(crate) mod parse;
 pub(crate) mod structure;
+pub(crate) mod client;
 
+use crate::client::{poll_websocket_stream, setup_websocket_stream};
 use crate::io::load_crystal;
-use crate::ui::{camera_controls, setup_camera, setup_scene};
+use crate::structure::{update_crystal_system, UpdateStructure};
+use crate::ui::{camera_controls, refresh_atoms_system, setup_camera, setup_scene};
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
@@ -29,7 +32,19 @@ pub fn run_app() {
             filter: "wgpu=error,bevy_render=info,bevy_ecs=trace".to_string(),
             custom_layer: |_| None,
         }))
-        .add_systems(Startup, (load_crystal, setup_scene, setup_camera).chain())
-        .add_systems(Update, camera_controls)
+        .add_event::<UpdateStructure>()
+        .add_systems(
+            Startup,
+            (load_crystal, setup_scene, setup_camera, setup_websocket_stream).chain(),
+        )
+        .add_systems(
+            Update,
+            (
+                poll_websocket_stream,
+                update_crystal_system,
+                refresh_atoms_system,
+                camera_controls,
+            ),
+        )
         .run();
 }
