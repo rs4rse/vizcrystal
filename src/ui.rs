@@ -3,14 +3,15 @@ use bevy::prelude::*;
 use std::collections::HashMap;
 
 use crate::constants::{get_element_color, get_element_size};
-use crate::structure::{AtomEntity, Molecule};
+use crate::structure::{AtomEntity, Crystal, Molecule};
 
 // System to set up the 3D scene
 pub fn setup_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    molecule: Res<Molecule>,
+    molecule: Option<Res<Molecule>>,
+    crystal: Option<Res<Crystal>>,
 ) {
     // Create a sphere mesh for atoms
     let sphere_mesh = meshes.add(Mesh::from(Sphere { radius: 1.0 }));
@@ -19,30 +20,61 @@ pub fn setup_scene(
     let mut element_materials: HashMap<String, Handle<StandardMaterial>> = HashMap::new();
 
     // Spawn atoms as 3D spheres
-    for atom in &crystal.atoms {
-        // Get or create material for this element
-        let material = element_materials
-            .entry(atom.element.clone())
-            .or_insert_with(|| {
-                materials.add(StandardMaterial {
-                    base_color: get_element_color(&atom.element),
-                    metallic: 0.0,
-                    ..default()
+    if let Some(molecule) = molecule {
+        for atom in &molecule.atoms {
+            // Get or create material for this element
+            let material = element_materials
+                .entry(atom.element.clone())
+                .or_insert_with(|| {
+                    materials.add(StandardMaterial {
+                        base_color: get_element_color(&atom.element),
+                        metallic: 0.0,
+                        ..default()
+                    })
                 })
-            })
-            .clone();
+                .clone();
 
-        // Spawn the atom as a sphere
-        commands.spawn((
-            Mesh3d(sphere_mesh.clone()),
-            MeshMaterial3d(material),
-            Transform {
-                translation: Vec3::new(atom.x, atom.y, atom.z),
-                scale: Vec3::splat(get_element_size(&atom.element)),
-                ..default()
-            },
-            AtomEntity,
-        ));
+            // Spawn the atom as a sphere
+            commands.spawn((
+                Mesh3d(sphere_mesh.clone()),
+                MeshMaterial3d(material),
+                Transform {
+                    translation: Vec3::new(atom.x, atom.y, atom.z),
+                    scale: Vec3::splat(get_element_size(&atom.element)),
+                    ..default()
+                },
+                AtomEntity,
+            ));
+        }
+    }
+
+    // Spawn atoms as 3D spheres
+    if let Some(crystal) = crystal {
+        for atom in &crystal.atoms {
+            // Get or create material for this element
+            let material = element_materials
+                .entry(atom.element.clone())
+                .or_insert_with(|| {
+                    materials.add(StandardMaterial {
+                        base_color: get_element_color(&atom.element),
+                        metallic: 0.0,
+                        ..default()
+                    })
+                })
+                .clone();
+
+            // Spawn the atom as a sphere
+            commands.spawn((
+                Mesh3d(sphere_mesh.clone()),
+                MeshMaterial3d(material),
+                Transform {
+                    translation: Vec3::new(atom.x, atom.y, atom.z),
+                    scale: Vec3::splat(get_element_size(&atom.element)),
+                    ..default()
+                },
+                AtomEntity,
+            ));
+        }
     }
 
     // Remove static scene light; lighting will be attached to the camera in setup_camera

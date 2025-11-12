@@ -8,7 +8,7 @@ pub(crate) mod constants;
 pub(crate) mod parse;
 pub(crate) mod structure;
 
-use crate::io::load_crystal;
+use crate::io::load_structure;
 use crate::ui::{camera_controls, setup_camera, setup_scene};
 
 #[cfg(target_arch = "wasm32")]
@@ -29,7 +29,7 @@ pub fn run_app() {
             filter: "wgpu=error,bevy_render=info,bevy_ecs=trace".to_string(),
             custom_layer: |_| None,
         }))
-        .add_systems(Startup, (load_crystal, setup_scene, setup_camera).chain())
+        .add_systems(Startup, (load_structure, setup_scene, setup_camera).chain())
         .add_systems(Update, camera_controls)
         .run();
 }
