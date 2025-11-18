@@ -1,12 +1,17 @@
 use bevy::prelude::*;
+use bevy::render::camera::Viewport;
+use bevy::render::view::RenderLayers;
 
 use std::collections::HashMap;
 
 use crate::constants::{get_element_color, get_element_size};
 use crate::structure::{AtomEntity, Crystal};
 
+#[derive(Component)]
+pub(crate) struct MainCamera;
+
 // System to set up the 3D scene
-pub fn setup_scene(
+pub(crate) fn setup_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -55,13 +60,26 @@ pub fn setup_scene(
     });
 }
 
+const GIZMO_LAYER: RenderLayers = RenderLayers::layer(1);
+
 // System to set up the camera
-pub fn setup_camera(mut commands: Commands) {
-    // Spawn camera
+pub(crate) fn setup_cameras(mut commands: Commands, windows: Query<&Window>) {
+    let window = windows.single().unwrap();
+    let viewport_size = UVec2::new(200, 200);
+    let bottom_left_y = window.physical_height() - viewport_size.y - 10;
+    let viewport_position = UVec2::new(10, bottom_left_y);
+
+    // Spawn cameras
     commands
         .spawn((
             Camera3d::default(),
+            Camera {
+                order: 0,
+                ..default()
+            },
             Transform::from_xyz(5.0, 5.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+            RenderLayers::layer(0),
+            MainCamera,
         ))
         .with_children(|parent| {
             // Attach a directional light to the camera so it always points where the camera looks
@@ -73,12 +91,84 @@ pub fn setup_camera(mut commands: Commands) {
                 },
                 Transform::default(), // inherit camera rotation; light points along -Z in local space
             ));
+        })
+        .with_children(|parent| {
+            // GIZMO CAMERA
+            parent.spawn((
+                Camera3d { ..default() },
+                Camera {
+                    order: 1,
+                    viewport: Some(Viewport {
+                        physical_position: viewport_position,
+                        physical_size: viewport_size,
+                        ..default()
+                    }),
+                    ..default()
+                },
+                Transform::default(),
+                GlobalTransform::default(),
+                GIZMO_LAYER,
+            ));
+        });
+}
+
+pub(crate) fn spawn_axis(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let mut axis = |color: Color,
+                    (x, y, z): (f32, f32, f32),
+                    (x_, y_, z_): (f32, f32, f32)|
+     -> (
+        (Mesh3d, MeshMaterial3d<StandardMaterial>, Transform),
+        RenderLayers,
+    ) {
+        let mesh = meshes.add(Mesh::from(Cuboid::new(x, y, z)));
+        let material = materials.add(StandardMaterial {
+            base_color: color,
+            unlit: true,
+            ..default()
+        });
+        (
+            (
+                Mesh3d(mesh),
+                MeshMaterial3d(material),
+                Transform::from_xyz(x_, y_, z_),
+            ),
+            GIZMO_LAYER, // visible only to axis camera
+        )
+    };
+
+    let scale = 2.0;
+    commands
+        .spawn((
+            Transform::default(),
+            GlobalTransform::default(),
+            GIZMO_LAYER,
+        ))
+        .with_children(|p| {
+            p.spawn(axis(
+                Srgba::RED.into(),
+                (scale * 1., scale * 0.1, scale * 0.1),
+                (scale * 1. / 2., 0., 0.),
+            )); // +X
+            p.spawn(axis(
+                Srgba::GREEN.into(),
+                (scale * 0.1, scale * 1., scale * 0.1),
+                (0., scale * 1. / 2., 0.),
+            )); // +Y
+            p.spawn(axis(
+                Srgba::BLUE.into(),
+                (scale * 0.1, scale * 0.1, scale * 1.),
+                (0., 0., scale * 1. / 2.),
+            )); // +Z
         });
 }
 
 // Simple camera controls
-pub fn camera_controls(
-    mut camera_query: Query<&mut Transform, With<Camera3d>>,
+pub(crate) fn camera_controls(
+    mut camera_query: Query<&mut Transform, With<MainCamera>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
 ) {
