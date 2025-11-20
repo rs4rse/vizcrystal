@@ -1,5 +1,7 @@
+use bevy::app::{App, PluginGroup, Startup, Update};
+use bevy::DefaultPlugins;
+use bevy::ecs::schedule::IntoScheduleConfigs;
 use bevy::log::{Level, LogPlugin};
-use bevy::prelude::*;
 
 pub(crate) mod io;
 pub(crate) mod ui;

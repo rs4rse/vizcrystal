@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::color::Color;
 
 // Get color for different elements
 pub(crate) fn get_element_color(element: &str) -> Color {

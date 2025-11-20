@@ -1,7 +1,24 @@
-use bevy::prelude::*;
-use bevy::render::camera::Viewport;
+use bevy::asset::{Assets, Handle};
+use bevy::color::{Color, Srgba};
+use bevy::ecs::change_detection::DetectChanges;
+use bevy::ecs::component::Component;
+use bevy::ecs::entity::Entity;
+use bevy::ecs::query::With;
+use bevy::ecs::system::{Commands, Query, Res, ResMut};
+use bevy::input::keyboard::KeyCode;
+use bevy::input::ButtonInput;
+use bevy::math::primitives::{Cuboid, Sphere};
+use bevy::math::{EulerRot, Quat, UVec2, Vec3};
+use bevy::pbr::{AmbientLight, DirectionalLight, MeshMaterial3d, StandardMaterial};
+use bevy::render::mesh::{Mesh, Mesh3d};
+use bevy::time::Time;
+use bevy::transform::components::{GlobalTransform, Transform};
+use bevy::core_pipeline::core_3d::Camera3d;
+use bevy::render::camera::{Camera, Viewport};
 use bevy::render::view::RenderLayers;
+use bevy::window::Window;
 
+use bevy::utils::default;
 use std::collections::HashMap;
 
 use crate::constants::{get_element_color, get_element_size};

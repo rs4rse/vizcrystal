@@ -2,7 +2,10 @@
 // Supports both native (async-tungstenite) and WASM (web-sys) targets
 
 use crate::structure::{Atom, UpdateStructure};
-use bevy::prelude::*;
+use bevy::ecs::event::EventWriter;
+use bevy::ecs::resource::Resource;
+use bevy::ecs::system::{Commands, Res};
+use bevy::log::info;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use serde::{Deserialize, Serialize};
 
