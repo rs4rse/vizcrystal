@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::structure::{Atom, Crystal};
+
 // System to load crystal data
 pub fn load_crystal(mut commands: Commands) {
     // For now, use the default water molecule structure

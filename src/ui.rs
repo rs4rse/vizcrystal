@@ -166,6 +166,54 @@ pub(crate) fn spawn_axis(
         });
 }
 
+// System to refresh atoms when Crystal resource changes
+pub fn refresh_atoms_system(
+    mut commands: Commands,
+    crystal: Res<Crystal>,
+    atom_entities: Query<Entity, With<AtomEntity>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    // Only run when Crystal resource changes
+    if !crystal.is_changed() {
+        return;
+    }
+
+    // Despawn all existing atoms
+    for entity in atom_entities.iter() {
+        commands.entity(entity).despawn();
+    }
+
+    // Respawn with new positions
+    let sphere_mesh = meshes.add(Mesh::from(Sphere { radius: 1.0 }));
+    let mut element_materials: HashMap<String, Handle<StandardMaterial>> = HashMap::new();
+
+    for atom in &crystal.atoms {
+        // Get or create material for this element
+        let material = element_materials
+            .entry(atom.element.clone())
+            .or_insert_with(|| {
+                materials.add(StandardMaterial {
+                    base_color: get_element_color(&atom.element),
+                    metallic: 0.0,
+                    ..default()
+                })
+            })
+            .clone();
+
+        commands.spawn((
+            Mesh3d(sphere_mesh.clone()),
+            MeshMaterial3d(material),
+            Transform {
+                translation: Vec3::new(atom.x, atom.y, atom.z),
+                scale: Vec3::splat(get_element_size(&atom.element)),
+                ..default()
+            },
+            AtomEntity,
+        ));
+    }
+}
+
 // Simple camera controls
 pub(crate) fn camera_controls(
     mut camera_query: Query<&mut Transform, With<MainCamera>>,
