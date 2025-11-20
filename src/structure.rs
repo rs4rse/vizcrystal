@@ -1,4 +1,7 @@
-use bevy::prelude::*;
+use bevy::ecs::component::Component;
+use bevy::ecs::event::{Event, EventReader};
+use bevy::ecs::resource::Resource;
+use bevy::ecs::system::ResMut;
 
 // Structure to represent an atom from XYZ file
 // `#` is a macro. no inheritance. close to python decorator. injecting on top of something.
