@@ -60,7 +60,10 @@ pub fn poll_websocket_stream(
     mut events: EventWriter<UpdateStructure>,
 ) {
     while let Ok(update) = stream.receiver.try_recv() {
-        info!("Received structure update with {} atoms", update.atoms.len());
+        info!(
+            "Received structure update with {} atoms",
+            update.atoms.len()
+        );
         events.write(update);
     }
 }
@@ -90,7 +93,10 @@ fn setup_native_websocket(tx: Sender<UpdateStructure>) {
                                 serde_json::from_str::<StructureMessage>(&text)
                             {
                                 let atoms = structure_msg
-                                    .atoms.into_iter().map(std::convert::Into::into).collect();
+                                    .atoms
+                                    .into_iter()
+                                    .map(std::convert::Into::into)
+                                    .collect();
 
                                 if tx.send(UpdateStructure { atoms }).is_err() {
                                     println!("Bevy channel closed");
@@ -112,7 +118,8 @@ fn setup_native_websocket(tx: Sender<UpdateStructure>) {
             }
             Err(e) => eprintln!("Failed to connect WS: {}", e),
         }
-    }).detach();
+    })
+    .detach();
 }
 
 // WASM WebSocket client using web-sys
@@ -130,11 +137,7 @@ fn setup_wasm_websocket(tx: Sender<UpdateStructure>) {
         if let Ok(txt) = e.data().dyn_into::<js_sys::JsString>() {
             let text: String = txt.into();
             if let Ok(structure_msg) = serde_json::from_str::<StructureMessage>(&text) {
-                let atoms: Vec<Atom> = structure_msg
-                    .atoms
-                    .into_iter()
-                    .map(|a| a.into())
-                    .collect();
+                let atoms: Vec<Atom> = structure_msg.atoms.into_iter().map(|a| a.into()).collect();
 
                 let _ = tx_clone.send(UpdateStructure { atoms });
             }
