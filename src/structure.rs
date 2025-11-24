@@ -17,6 +17,8 @@ pub struct Crystal {
     pub atoms: Vec<Atom>,
 }
 
+// XXX: entity is the id point to the thing consist of components
+
 // Component to mark atom entities
 #[derive(Component)]
 pub struct AtomEntity;
