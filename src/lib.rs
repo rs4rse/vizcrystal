@@ -12,8 +12,11 @@ pub(crate) mod structure;
 use crate::client::{poll_websocket_stream, setup_websocket_stream};
 use crate::io::load_crystal;
 use crate::structure::{update_crystal_system, UpdateStructure};
-use crate::ui::spawn_axis;
 use crate::ui::{camera_controls, refresh_atoms_system, setup_cameras, setup_scene};
+use crate::ui::{
+    handle_toggle_events, reset_camera_button_interaction, toggle_button, ToggleEvent, ToggleStates,
+};
+use crate::ui::{setup_buttons, spawn_axis};
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
@@ -33,12 +36,20 @@ pub fn run_app() {
             filter: "wgpu=error,bevy_render=info,bevy_ecs=trace".to_string(),
             custom_layer: |_| None,
         }))
+        .init_resource::<ToggleStates>()
         .add_event::<UpdateStructure>()
+        .add_event::<ToggleEvent>()
         .add_systems(Startup, load_crystal)
         .add_systems(Startup, setup_scene.after(load_crystal))
         .add_systems(
             Startup,
-            (setup_cameras, spawn_axis, setup_websocket_stream).after(setup_scene),
+            (
+                setup_cameras,
+                spawn_axis,
+                setup_buttons,
+                setup_websocket_stream,
+            )
+                .after(setup_scene),
         )
         .add_systems(
             Update,
@@ -46,6 +57,9 @@ pub fn run_app() {
                 poll_websocket_stream,
                 update_crystal_system,
                 refresh_atoms_system,
+                toggle_button,
+                reset_camera_button_interaction,
+                handle_toggle_events,
                 camera_controls,
             ),
         )
