@@ -1,9 +1,8 @@
-// parse.rs
 use crate::structure::{Atom, Crystal};
 use anyhow::{Context, Result};
 
 // Function to parse XYZ file format from string content
-pub fn parse_xyz_content(contents: &str) -> Result<Crystal> {
+pub(crate) fn parse_xyz_content(contents: &str) -> Result<Crystal> {
     let lines = contents.lines().collect::<Vec<&str>>();
 
     if lines.len() < 2 {
@@ -48,8 +47,7 @@ pub fn parse_xyz_content(contents: &str) -> Result<Crystal> {
 }
 
 // Function to read XYZ file from path
-#[allow(dead_code)]
-pub fn read_xyz_file(path: &str) -> Result<Crystal> {
+fn read_xyz_file(path: &str) -> Result<Crystal> {
     let contents =
         std::fs::read_to_string(path).context(format!("Failed to read XYZ file: {}", path))?;
     parse_xyz_content(&contents)

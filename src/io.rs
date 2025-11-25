@@ -6,7 +6,7 @@ use crate::parse::parse_xyz_content;
 use crate::structure::{Atom, Crystal};
 
 // System to load default crystal data
-pub fn load_default_crystal(mut commands: Commands) {
+pub(crate) fn load_default_crystal(mut commands: Commands) {
     println!("Loading default water molecule structure");
 
     let crystal = Crystal {
@@ -37,13 +37,19 @@ pub fn load_default_crystal(mut commands: Commands) {
 
 // Resource to handle file drag and drop
 #[derive(Resource, Default)]
-pub struct FileDragDrop {
-    pub dragged_file: Option<PathBuf>,
-    pub loaded_crystal: Option<Crystal>,
+pub(crate) struct FileDragDrop {
+    dragged_file: Option<PathBuf>,
+    loaded_crystal: Option<Crystal>,
+}
+
+impl FileDragDrop {
+    pub(crate) fn dragged_file(&self) -> Option<&PathBuf> {
+        self.dragged_file.as_ref()
+    }
 }
 
 // System to handle file drag and drop events
-pub fn handle_file_drag_drop(
+pub(crate) fn handle_file_drag_drop(
     mut drag_drop_events: EventReader<bevy::window::FileDragAndDrop>,
     mut file_drag_drop: ResMut<FileDragDrop>,
 ) {
@@ -71,7 +77,7 @@ pub fn handle_file_drag_drop(
 }
 
 // System to load crystal from dropped file
-pub fn load_dropped_file(
+pub(crate) fn load_dropped_file(
     mut file_drag_drop: ResMut<FileDragDrop>,
     mut crystal_loaded: Local<bool>,
 ) {
@@ -97,7 +103,7 @@ pub fn load_dropped_file(
 }
 
 // System to update crystal resource when new file is loaded
-pub fn update_crystal_from_file(
+pub(crate) fn update_crystal_from_file(
     mut commands: Commands,
     file_drag_drop: Res<FileDragDrop>,
     current_crystal: Option<Res<Crystal>>,

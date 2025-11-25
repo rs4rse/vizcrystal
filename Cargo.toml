@@ -36,6 +36,10 @@ webgl2 = ["bevy/webgl2"]
 # need both, cdylib for wasm, rlib for main.rs
 crate-type = ["cdylib", "rlib"]
 
+[[bin]]
+name = "vizmat-native"
+path = "src/main.rs"
+
 # optimize for smaller WASM binary size
 [profile.release]
 lto = "thin"

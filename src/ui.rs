@@ -35,8 +35,12 @@ impl ToggleId {
 #[derive(Component)]
 pub(crate) struct FileUploadText;
 
+// Component for load default button
+#[derive(Component)]
+pub(crate) struct LoadDefaultButton;
+
 // System to set up file upload UI
-pub fn setup_file_ui(mut commands: Commands) {
+pub(crate) fn setup_file_ui(mut commands: Commands) {
     commands.spawn((
         Text::new("Drag and drop an XYZ file here to visualize"),
         TextFont {
@@ -52,15 +56,40 @@ pub fn setup_file_ui(mut commands: Commands) {
         },
         FileUploadText,
     ));
+
+    // Add button to load default structure
+    commands
+        .spawn((
+            Button,
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(40.0),
+                left: Val::Px(10.0),
+                padding: UiRect::all(Val::Px(10.0)),
+                ..default()
+            },
+            BackgroundColor(Color::srgb(0.15, 0.15, 0.15)),
+            LoadDefaultButton,
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                Text::new("Load Default Structure"),
+                TextFont {
+                    font_size: 18.0,
+                    ..default()
+                },
+                TextColor(Color::WHITE),
+            ));
+        });
 }
 
 // System to update file upload UI
-pub fn update_file_ui(
+pub(crate) fn update_file_ui(
     file_drag_drop: Res<crate::io::FileDragDrop>,
     mut text_query: Query<&mut Text, With<FileUploadText>>,
 ) {
     if let Ok(mut text) = text_query.single_mut() {
-        if let Some(ref path) = file_drag_drop.dragged_file {
+        if let Some(path) = file_drag_drop.dragged_file() {
             if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
                 // Update the text content
                 **text = format!("Loaded: {}", file_name);
@@ -145,6 +174,31 @@ pub fn clear_old_atoms(mut commands: Commands, atom_query: Query<Entity, With<At
     }
 }
 
+// System to handle button click to load default structure
+pub(crate) fn handle_load_default_button(
+    mut interaction_query: Query<
+        (&Interaction, &mut BackgroundColor),
+        (Changed<Interaction>, With<LoadDefaultButton>),
+    >,
+    mut commands: Commands,
+) {
+    for (interaction, mut color) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                *color = BackgroundColor(Color::srgb(0.35, 0.35, 0.35));
+                // Load default water molecule
+                crate::io::load_default_crystal(commands.reborrow());
+            }
+            Interaction::Hovered => {
+                *color = BackgroundColor(Color::srgb(0.25, 0.25, 0.25));
+            }
+            Interaction::None => {
+                *color = BackgroundColor(Color::srgb(0.15, 0.15, 0.15));
+            }
+        }
+    }
+}
+
 // System to set up the 3D scene
 pub(crate) fn setup_scene(
     mut commands: Commands,
@@ -164,23 +218,25 @@ pub(crate) fn setup_scene(
 }
 
 // System to respawn atoms when crystal changes
-pub fn update_scene(
+pub(crate) fn update_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    crystal: Res<Crystal>,
+    crystal: Option<Res<Crystal>>,
     atom_query: Query<Entity, With<AtomEntity>>,
 ) {
-    if crystal.is_changed() {
-        // Clear existing atoms
-        for entity in atom_query.iter() {
-            commands.entity(entity).despawn();
+    if let Some(crystal) = crystal {
+        if crystal.is_changed() {
+            // Clear existing atoms
+            for entity in atom_query.iter() {
+                commands.entity(entity).despawn();
+            }
+
+            // Spawn new atoms
+            spawn_atoms(&mut commands, &mut meshes, &mut materials, &crystal);
+
+            println!("Scene updated with new crystal structure");
         }
-
-        // Spawn new atoms
-        spawn_atoms(&mut commands, &mut meshes, &mut materials, &crystal);
-
-        println!("Scene updated with new crystal structure");
     }
 }
 
@@ -223,7 +279,7 @@ fn spawn_atoms(
 }
 
 // System to set up the camera
-pub fn setup_cameras(
+pub(crate) fn setup_cameras(
     mut commands: Commands,
     mut toggle_states: ResMut<ToggleStates>,
     windows: Query<&Window>,
