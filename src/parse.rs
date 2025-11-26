@@ -45,10 +45,3 @@ pub(crate) fn parse_xyz_content(contents: &str) -> Result<Crystal> {
 
     Ok(Crystal { atoms })
 }
-
-// Function to read XYZ file from path
-fn read_xyz_file(path: &str) -> Result<Crystal> {
-    let contents =
-        std::fs::read_to_string(path).context(format!("Failed to read XYZ file: {}", path))?;
-    parse_xyz_content(&contents)
-}
