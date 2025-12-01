@@ -14,6 +14,27 @@ const LAYER_CANVAS: RenderLayers = RenderLayers::layer(0);
 #[derive(Component)]
 pub(crate) struct MainCamera;
 
+/// Button that resets the camera to its original position/orientation.
+#[derive(Component)]
+pub(crate) struct ResetCameraButton;
+
+#[derive(Component)]
+pub(crate) struct LightAttachmentButton {
+    attached: bool,
+}
+
+/// Component identifying a toggle button instance.
+#[derive(Component)]
+pub(crate) struct ToggleButton {
+    id: ToggleId,
+}
+
+/// Component carried by the text to update when a toggle changes.
+#[derive(Component)]
+pub(crate) struct ToggleText {
+    id: ToggleId,
+}
+
 /// Identifier for a reusable toggle interaction.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum ToggleId {
@@ -63,18 +84,6 @@ pub(crate) struct MainCameraEntity(pub Entity);
 #[derive(Resource)]
 pub(crate) struct MainLightEntity(pub Entity);
 
-/// Component identifying a toggle button instance.
-#[derive(Component)]
-pub(crate) struct ToggleButton {
-    id: ToggleId,
-}
-
-/// Component carried by the text to update when a toggle changes.
-#[derive(Component)]
-pub(crate) struct ToggleText {
-    id: ToggleId,
-}
-
 /// Event emitted whenever a toggle switches state.
 #[derive(Event)]
 pub struct ToggleEvent {
@@ -92,10 +101,6 @@ pub(crate) struct CameraRig {
     initial_rotation: Quat,
     initial_scale: Vec3,
 }
-
-/// Button that resets the camera to its original position/orientation.
-#[derive(Component)]
-pub(crate) struct ResetCameraButton;
 
 // System to set up the 3D scene
 pub(crate) fn setup_scene(
@@ -281,6 +286,30 @@ pub fn setup_buttons(mut commands: Commands, toggle_states: Res<ToggleStates>) {
 
             let id = ToggleId::LightAttachment;
             spawn_button(id);
+
+            parent
+                .spawn((
+                    Button,
+                    Node {
+                        padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
+                        border: UiRect::all(Val::Px(1.0)),
+                        ..default()
+                    },
+                    BorderColor(Color::srgb(0.3, 0.3, 0.3)),
+                    BackgroundColor(Color::srgb(0.15, 0.15, 0.15)),
+                    LightAttachmentButton { attached: false },
+                ))
+                .with_children(|button| {
+                    button.spawn((
+                        Text::new("Light: Detached"),
+                        TextFont {
+                            font: default(),
+                            font_size: 12.0,
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                    ));
+                });
 
             parent
                 .spawn((
@@ -529,12 +558,49 @@ pub fn toggle_button(
     }
 }
 
+#[allow(clippy::type_complexity)]
+pub fn toggle_light_attachment(
+    mut interactions: Query<
+        (&Interaction, &mut BackgroundColor, &ToggleButton),
+        (Changed<Interaction>, With<LightAttachmentButton>),
+    >,
+    mut texts: Query<(&ToggleText, &mut Text)>,
+    mut toggle_states: ResMut<ToggleStates>,
+    mut toggle_events: EventWriter<ToggleEvent>,
+) {
+    for (interaction, mut background, toggle_button) in &mut interactions {
+        match *interaction {
+            Interaction::Pressed => {
+                let new_state = toggle_states.toggle(toggle_button.id);
+                toggle_events.write(ToggleEvent {
+                    id: toggle_button.id,
+                    state: new_state,
+                });
+
+                for (text_marker, mut text) in &mut texts {
+                    if text_marker.id == toggle_button.id {
+                        text.0 = ToggleId::label(toggle_button.id, new_state).into();
+                    }
+                }
+
+                *background = BackgroundColor(Color::srgb(0.25, 0.25, 0.25));
+            }
+            Interaction::Hovered => {
+                *background = BackgroundColor(Color::srgb(0.2, 0.2, 0.2));
+            }
+            Interaction::None => {
+                *background = BackgroundColor(Color::srgb(0.15, 0.15, 0.15));
+            }
+        }
+    }
+}
+
 // Handle reset button interaction.
 #[allow(clippy::type_complexity)]
 pub fn reset_camera_button_interaction(
     mut interactions: Query<
         (&Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<Button>, With<ResetCameraButton>),
+        (Changed<Interaction>, With<ResetCameraButton>),
     >,
     camera_entity: Option<Res<MainCameraEntity>>,
     mut camera_query: Query<&mut Transform, With<Camera3d>>,
@@ -609,4 +675,8 @@ pub fn handle_toggle_events(
             }
         }
     }
+}
+
+pub(crate) fn handle_toggle_light_attachment() {
+    todo!()
 }
